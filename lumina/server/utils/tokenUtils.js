@@ -12,11 +12,16 @@ export const getJwtSecret = (key) => {
   return `${key.toLowerCase()}-development-only-secret-replace-before-deployment-64`;
 };
 
-const cookieBase = () => ({
-  httpOnly: true,
-  secure: process.env.NODE_ENV === 'production',
-  sameSite: 'strict'
-});
+const cookieBase = () => {
+  const sameSite = process.env.COOKIE_SAME_SITE || (process.env.NODE_ENV === 'production' ? 'none' : 'lax');
+  const options = {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production' || sameSite === 'none',
+    sameSite
+  };
+  if (process.env.COOKIE_DOMAIN) options.domain = process.env.COOKIE_DOMAIN;
+  return options;
+};
 
 /**
  * Generates a short-lived JWT access token for authenticated API requests.

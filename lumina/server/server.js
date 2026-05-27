@@ -20,7 +20,10 @@ await import('./config/passport.js');
 
 const app = express();
 const port = process.env.PORT || 5000;
-const clientUrl = process.env.CLIENT_URL || 'http://localhost:5173';
+const clientOrigins = (process.env.CLIENT_URL || 'http://localhost:5173')
+  .split(',')
+  .map((origin) => origin.trim())
+  .filter(Boolean);
 
 app.use(helmet({
   contentSecurityPolicy: {
@@ -43,7 +46,7 @@ app.use(helmet({
 }));
 app.use(cors({
   origin: (origin, callback) => {
-    if (!origin || origin === clientUrl) {
+    if (!origin || clientOrigins.includes(origin)) {
       callback(null, true);
       return;
     }
@@ -76,7 +79,7 @@ app.use(errorHandler);
 const start = async () => {
   try {
     app.locals.dbConnected = await connectDB();
-    app.listen(port, () => {
+    app.listen(port, '0.0.0.0', () => {
       logger.info(`Lumina API listening on port ${port}`);
     });
   } catch (error) {
