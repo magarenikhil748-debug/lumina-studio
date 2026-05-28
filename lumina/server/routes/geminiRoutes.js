@@ -4,6 +4,8 @@ import { requireAuth } from '../middleware/auth.js';
 import { aiLimiter } from '../middleware/rateLimiter.js';
 import { validateRequest } from '../middleware/validateRequest.js';
 import { geminiGenerateValidators } from '../middleware/validators.js';
+import { withPlanAccess } from '../lib/stripe/withPlanAccess.js';
+import { getPlanLimits } from '../lib/stripe/plans.js';
 import { findDevUserById, saveDevUser, usingDb } from '../utils/devStore.js';
 
 const router = express.Router();
@@ -14,7 +16,7 @@ const nextMonthStart = () => {
 };
 
 const resetIfNeeded = async (user) => {
-  if (!user || user.tier === 'pro') return user;
+  if (!user || user.tier === 'pro' || ['pro', 'studio'].includes(user.plan)) return user;
   const resetAt = user.generationsResetAt ? new Date(user.generationsResetAt) : new Date(0);
   if (resetAt > new Date()) return user;
   user.generationsUsedThisMonth = 0;
@@ -27,12 +29,14 @@ const resetIfNeeded = async (user) => {
 const enforceGenerationLimit = async (req, res, next) => {
   try {
     await resetIfNeeded(req.user);
-    if (req.user?.tier === 'pro') {
+    const access = await withPlanAccess(req.user._id || req.user.id, 'unlimitedAiGenerations');
+    if (access.allowed) {
       next();
       return;
     }
-    if (Number(req.user?.generationsUsedThisMonth || 0) >= 3) {
-      res.status(403).json({ success: false, error: 'Monthly generation limit reached', limit: 3, upgradeUrl: '/pricing' });
+    const limit = getPlanLimits(access.plan).aiGenerationsPerMonth;
+    if (Number(req.user?.generationsUsedThisMonth || 0) >= limit) {
+      res.status(403).json({ success: false, error: 'Monthly generation limit reached', limit, upgradeUrl: '/pricing' });
       return;
     }
     next();
@@ -42,7 +46,7 @@ const enforceGenerationLimit = async (req, res, next) => {
 };
 
 const incrementGenerationUsage = async (user) => {
-  if (!user || user.tier === 'pro') return;
+  if (!user || user.tier === 'pro' || ['pro', 'studio'].includes(user.plan)) return;
   user.generationsUsedThisMonth = Number(user.generationsUsedThisMonth || 0) + 1;
   if (usingDb()) await user.save();
   else saveDevUser(findDevUserById(user._id || user.id) || user);

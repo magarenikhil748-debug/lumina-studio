@@ -107,6 +107,28 @@ export const geminiAPI = {
   }
 };
 
+export const billingAPI = {
+  plans: async () => {
+    const { data } = await api.get('/billing/plans', { skipAuthRedirect: true });
+    return data.data;
+  },
+  checkout: async (payload) => {
+    const { data } = await api.post('/billing/checkout', payload);
+    return data;
+  },
+  portal: async () => {
+    const { data } = await api.post('/billing/portal');
+    return data;
+  }
+};
+
+export const userAPI = {
+  getPlan: async () => {
+    const { data } = await api.get('/user/plan', { skipAuthRedirect: true, skipRefresh: true });
+    return data.data;
+  }
+};
+
 /**
  * Requests AI-generated portfolio recommendations.
  * @param {object} payload - Form data collected in the builder.

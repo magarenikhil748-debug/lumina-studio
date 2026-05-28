@@ -46,6 +46,8 @@ const buildConfig = () => {
     clientUrl: process.env.CLIENT_URL || 'http://localhost:5173',
     cookieSecure: process.env.COOKIE_SECURE === 'true',
     cookieSameSite: process.env.COOKIE_SAME_SITE || 'lax',
+    stripeSecretKey: process.env.STRIPE_SECRET_KEY || '',
+    stripeWebhookSecret: process.env.STRIPE_WEBHOOK_SECRET || '',
     version: process.env.npm_package_version || '1.0.0'
   };
 
@@ -104,13 +106,19 @@ async function startServer() {
 
     const [
       { default: authRoutes },
+      { default: billingRoutes },
       { default: geminiRoutes },
       { default: portfolioRoutes },
+      { default: stripeWebhookRoutes },
+      { default: userRoutes },
       { default: waitlistRoutes }
     ] = await Promise.all([
       import('./routes/authRoutes.js'),
+      import('./routes/billingRoutes.js'),
       import('./routes/geminiRoutes.js'),
       import('./routes/portfolioRoutes.js'),
+      import('./routes/stripeWebhookRoutes.js'),
+      import('./routes/userRoutes.js'),
       import('./routes/waitlistRoutes.js')
     ]);
 
@@ -153,6 +161,7 @@ async function startServer() {
 
     app.use(cors(corsOptions));
     app.options('*', cors(corsOptions));
+    app.use('/api/webhooks/stripe', stripeWebhookRoutes);
     app.use(generalLimiter);
     app.use(express.json({ limit: '750kb' }));
     app.use(express.urlencoded({ extended: true, limit: '750kb' }));
@@ -183,9 +192,11 @@ async function startServer() {
     });
 
     app.use('/api/auth', authRoutes);
+    app.use('/api/billing', billingRoutes);
     app.use('/api/gemini', geminiRoutes);
     app.use('/api/portfolios', portfolioRoutes);
     app.use('/api/portfolio', portfolioRoutes);
+    app.use('/api/user', userRoutes);
     app.use('/api/waitlist', waitlistRoutes);
     app.use(notFound);
     app.use(errorHandler);

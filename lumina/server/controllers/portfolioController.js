@@ -1,6 +1,8 @@
 import mongoose from 'mongoose';
 import Portfolio from '../models/Portfolio.js';
 import PortfolioView from '../models/PortfolioView.js';
+import { withPlanAccess } from '../lib/stripe/withPlanAccess.js';
+import { getPlanLimits } from '../lib/stripe/plans.js';
 import { clearCache } from '../middleware/cache.js';
 import { createObjectId, devStore, usingDb } from '../utils/devStore.js';
 import { generateSessionId, parseBrowser, parseDevice, parseReferrer } from '../utils/deviceParser.js';
@@ -18,6 +20,23 @@ const publicShape = (portfolio) => {
 };
 
 const buildSlug = (name) => generateSlug(name);
+
+const enforcePortfolioLimit = async (user) => {
+  const ownerId = ownerIdOf(user);
+  const access = await withPlanAccess(ownerId, 'unlimitedPortfolios');
+  if (access.allowed) return;
+  const limit = getPlanLimits(access.plan).portfolioLimit;
+  const count = usingDb()
+    ? await Portfolio.countDocuments({ ownerId })
+    : Array.from(devStore.portfoliosById.values()).filter((portfolio) => String(portfolio.ownerId) === ownerId).length;
+  if (limit >= 0 && count >= limit) {
+    throw Object.assign(new Error('Starter plan is limited to 1 portfolio. Upgrade to Pro for unlimited portfolios.'), {
+      statusCode: 403,
+      clientError: 'Portfolio limit reached',
+      clientMessage: 'Starter plan is limited to 1 portfolio. Upgrade to Pro for unlimited portfolios.'
+    });
+  }
+};
 
 const publicNotFoundError = () => Object.assign(new Error('Portfolio not found'), {
   statusCode: 404,
@@ -159,6 +178,7 @@ export const getPortfolios = async (req, res, next) => {
 
 export const createPortfolio = async (req, res, next) => {
   try {
+    await enforcePortfolioLimit(req.user);
     const payload = normalizePortfolio(req.body, req.user);
     if (usingDb()) {
       payload.slug = await ensureUniqueSlug(buildSlug(payload.name), Portfolio);

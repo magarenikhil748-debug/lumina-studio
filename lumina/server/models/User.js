@@ -1,5 +1,6 @@
 import bcrypt from 'bcryptjs';
 import mongoose from 'mongoose';
+import { getPlanLimits } from '../lib/stripe/plans.js';
 
 const nextMonthStart = () => {
   const now = new Date();
@@ -7,6 +8,34 @@ const nextMonthStart = () => {
 };
 
 const avatarForName = (name = 'Lumina User') => `https://api.dicebear.com/8.x/initials/svg?seed=${encodeURIComponent(name)}`;
+
+const planLimitsSchema = new mongoose.Schema({
+  portfolioLimit: Number,
+  aiGenerationsPerMonth: Number,
+  basicTemplates: Number,
+  animatedTemplates: Number,
+  publicUrl: Boolean,
+  watermark: Boolean,
+  analyticsViewsOnly: Boolean,
+  fullAnalytics: Boolean,
+  unlimitedPortfolios: Boolean,
+  unlimitedAiGenerations: Boolean,
+  customDomainExport: Boolean,
+  pdfExport: Boolean,
+  priorityAiGeneration: Boolean,
+  emailViewNotifications: Boolean,
+  portfolioVersions: Number,
+  vercelDeploy: Boolean,
+  whiteLabel: Boolean,
+  teamSeats: Number,
+  linkedInResumeImport: Boolean,
+  aiPortfolioScore: Boolean,
+  careerCoaching: Boolean,
+  passwordProtectedPortfolios: Boolean,
+  customFontsUpload: Boolean,
+  reactSourceExport: Boolean,
+  prioritySupport: Boolean
+}, { _id: false });
 
 const userSchema = new mongoose.Schema({
   name: { type: String, required: true, trim: true, maxlength: 100 },
@@ -20,7 +49,28 @@ const userSchema = new mongoose.Schema({
     }
   },
   tier: { type: String, enum: ['free', 'pro'], default: 'free' },
-  stripeCustomerId: { type: String, default: null },
+  stripeCustomerId: { type: String, default: null, index: true },
+  stripeSubscriptionId: { type: String, default: null, index: true },
+  plan: { type: String, enum: ['starter', 'pro', 'studio'], default: 'starter' },
+  billingCycle: { type: String, enum: ['monthly', 'annual', null], default: null },
+  subscriptionStatus: {
+    type: String,
+    enum: ['active', 'trialing', 'past_due', 'canceled', 'unpaid', 'incomplete', 'incomplete_expired', 'paused', 'none'],
+    default: 'none'
+  },
+  trialStartedAt: { type: Date, default: null },
+  trialEndsAt: { type: Date, default: null },
+  trialUsed: { type: Boolean, default: false },
+  currentPeriodStart: { type: Date, default: null },
+  currentPeriodEnd: { type: Date, default: null },
+  cancelAtPeriodEnd: { type: Boolean, default: false },
+  canceledAt: { type: Date, default: null },
+  gracePeriodEndsAt: { type: Date, default: null },
+  inGracePeriod: { type: Boolean, default: false },
+  planLimits: {
+    type: planLimitsSchema,
+    default: () => getPlanLimits('starter')
+  },
   generationsUsedThisMonth: { type: Number, default: 0 },
   generationsResetAt: { type: Date, default: nextMonthStart }
 }, { timestamps: true });

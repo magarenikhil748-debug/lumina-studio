@@ -1,5 +1,6 @@
 import bcrypt from 'bcryptjs';
 import mongoose from 'mongoose';
+import { getPlanLimits } from '../lib/stripe/plans.js';
 
 export const devStore = {
   usersById: new Map(),
@@ -36,6 +37,16 @@ export const toPublicUser = (user) => {
     email: source.email,
     avatar: source.avatar,
     tier: source.tier || 'free',
+    plan: source.plan || (source.tier === 'pro' ? 'pro' : 'starter'),
+    billingCycle: source.billingCycle || null,
+    subscriptionStatus: source.subscriptionStatus || 'none',
+    trialEndsAt: source.trialEndsAt || null,
+    trialUsed: Boolean(source.trialUsed),
+    currentPeriodEnd: source.currentPeriodEnd || null,
+    cancelAtPeriodEnd: Boolean(source.cancelAtPeriodEnd),
+    inGracePeriod: Boolean(source.inGracePeriod),
+    gracePeriodEndsAt: source.gracePeriodEndsAt || null,
+    planLimits: source.planLimits || getPlanLimits(source.plan || 'starter'),
     generationsUsedThisMonth: source.generationsUsedThisMonth || 0,
     generationsResetAt: source.generationsResetAt,
     createdAt: source.createdAt
@@ -97,7 +108,21 @@ export const createDevUser = async (payload) => {
     googleId: payload.googleId || null,
     avatar: payload.avatar,
     tier: payload.tier || 'free',
+    plan: payload.plan || 'starter',
+    billingCycle: null,
+    subscriptionStatus: 'none',
     stripeCustomerId: null,
+    stripeSubscriptionId: null,
+    trialStartedAt: null,
+    trialEndsAt: null,
+    trialUsed: false,
+    currentPeriodStart: null,
+    currentPeriodEnd: null,
+    cancelAtPeriodEnd: false,
+    canceledAt: null,
+    gracePeriodEndsAt: null,
+    inGracePeriod: false,
+    planLimits: getPlanLimits(payload.plan || 'starter'),
     generationsUsedThisMonth: 0,
     generationsResetAt: payload.generationsResetAt,
     createdAt: now,

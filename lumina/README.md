@@ -56,9 +56,17 @@ Create `server/.env` locally:
 
 ```env
 PORT=5000
-MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/lumina-studio
+MONGODB_URI=<your MongoDB Atlas connection string>
 GEMINI_API_KEY=your_gemini_api_key
 GEMINI_MODEL=gemini-2.5-flash
+STRIPE_SECRET_KEY=sk_test_your_stripe_secret_key
+STRIPE_PUBLISHABLE_KEY=pk_test_your_stripe_publishable_key
+STRIPE_WEBHOOK_SECRET=whsec_your_stripe_webhook_secret
+STRIPE_PRO_MONTHLY_PRICE_ID=price_your_pro_monthly_price
+STRIPE_PRO_ANNUAL_PRICE_ID=price_your_pro_annual_price
+STRIPE_STUDIO_MONTHLY_PRICE_ID=price_your_studio_monthly_price
+STRIPE_STUDIO_ANNUAL_PRICE_ID=price_your_studio_annual_price
+REDIS_URL=
 NODE_ENV=development
 CLIENT_URL=http://localhost:5173,http://127.0.0.1:5173
 COOKIE_SECURE=false
@@ -105,6 +113,11 @@ Do not commit real credentials. MongoDB URLs and Gemini API keys are private acc
 - `GET /api/auth/me`
 - `GET /api/auth/google`
 - `GET /api/auth/google/callback`
+- `GET /api/billing/plans`
+- `POST /api/billing/checkout`
+- `POST /api/billing/portal`
+- `POST /api/webhooks/stripe`
+- `GET /api/user/plan`
 - `POST /api/gemini/generate`
 - `GET /api/portfolios`
 - `POST /api/portfolios`
@@ -123,13 +136,15 @@ Do not commit real credentials. MongoDB URLs and Gemini API keys are private acc
 - Output directory: `dist`
 - Add `VITE_API_URL=https://your-railway-api.up.railway.app/api`
 - Add `VITE_CLIENT_URL=https://your-vercel-app.vercel.app`
+- Add `VITE_PUBLIC_SITE_URL=https://your-vercel-app.vercel.app`
+- Add `VITE_STRIPE_PUBLISHABLE_KEY=pk_live_your_publishable_key`
 - `client/vercel.json` includes SPA rewrites for React Router.
 
 ### Railway Backend
 
 - Root directory: `lumina/server`
 - Start command: `node server.js`
-- Add `MONGODB_URI`, `GEMINI_API_KEY`, `NODE_ENV=production`, `CLIENT_URL`, `COOKIE_SAME_SITE=none`, `COOKIE_SECURE=true`, JWT secrets, and Google OAuth secrets.
+- Add `MONGODB_URI`, `GEMINI_API_KEY`, `NODE_ENV=production`, `CLIENT_URL`, `COOKIE_SAME_SITE=none`, `COOKIE_SECURE=true`, JWT secrets, Google OAuth secrets, Stripe keys, Stripe price IDs, and `REDIS_URL` for BullMQ grace-period jobs.
 - Set `CLIENT_URL` to your Vercel URL. Multiple origins can be comma-separated.
 - `server/railway.toml` and `server/railway.json` include the start command, health check, and restart policy.
 
@@ -142,6 +157,16 @@ CLIENT_URL=https://lumina-studio.vercel.app,https://www.yourdomain.com
 ```
 
 Avoid `*` in production because the API uses credential-ready CORS behavior.
+
+## Stripe Billing Setup
+
+1. Create four active recurring prices in Stripe: Pro monthly, Pro annual, Studio monthly, and Studio annual.
+2. Set the matching price IDs in Railway.
+3. Configure Stripe Customer Portal to allow plan switching between those active prices, payment method updates, invoice history, and cancellation.
+4. Add a Stripe webhook endpoint pointing to `https://your-railway-api.up.railway.app/api/webhooks/stripe`.
+5. Subscribe the webhook to `checkout.session.completed`, `customer.subscription.updated`, `customer.subscription.deleted`, `invoice.payment_failed`, and `invoice.paid`.
+6. Set `STRIPE_WEBHOOK_SECRET` from the webhook signing secret.
+7. Add a Redis service and set `REDIS_URL` so BullMQ can schedule 3-day payment-failure grace-period downgrades.
 
 ## Future Stripe Structure
 

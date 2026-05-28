@@ -89,6 +89,18 @@ export const analyticsDaysQuery = [
     .toInt()
 ];
 
+export const billingCheckoutValidators = [
+  body('planId')
+    .customSanitizer(strip)
+    .isIn(['pro', 'studio'])
+    .withMessage('Plan must be Pro or Studio'),
+  body('billingCycle')
+    .optional({ values: 'falsy' })
+    .customSanitizer(strip)
+    .isIn(['monthly', 'annual'])
+    .withMessage('Billing cycle must be monthly or annual')
+];
+
 export const geminiGenerateValidators = [
   requiredText('name', 'Name', 2, 100)
     .matches(namePattern)
