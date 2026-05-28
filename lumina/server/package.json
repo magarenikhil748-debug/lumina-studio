@@ -6,8 +6,13 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "dev": "node server.js",
-    "build": "node --check server.js && node --check config/passport.js && node --check controllers/authController.js && node --check controllers/geminiController.js && node --check controllers/portfolioController.js && node --check controllers/waitlistController.js && node --check middleware/cache.js && node --check middleware/errorHandler.js && node --check middleware/validateRequest.js && node --check middleware/validators.js && node --check models/PortfolioView.js && node --check routes/authRoutes.js && node --check routes/geminiRoutes.js && node --check routes/portfolioRoutes.js && node --check routes/waitlistRoutes.js && node --check utils/deviceParser.js && node --check utils/logger.js && node --check utils/slugGenerator.js"
+    "dev": "node --watch server.js",
+    "build": "echo 'No build step required'",
+    "lint": "eslint . --ext .js"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
   },
   "dependencies": {
     "@google/generative-ai": "^0.12.0",
@@ -27,5 +32,8 @@
     "passport-google-oauth20": "^2.0.0",
     "passport-jwt": "^4.0.1",
     "winston": "^3.19.0"
+  },
+  "devDependencies": {
+    "eslint": "^8.57.0"
   }
 }

@@ -53,7 +53,7 @@ export const notFound = (req, res, next) => {
   next(error);
 };
 
-export const errorHandler = (err, req, res, next) => {
+export const errorHandler = (err, req, res, _next) => {
   const fallbackStatus = err.statusCode || (res.statusCode !== 200 ? res.statusCode : 500);
   const { statusCode, error, message } = safeErrorResponse(err, fallbackStatus);
 

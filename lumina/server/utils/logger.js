@@ -1,33 +1,42 @@
 import winston from 'winston';
 
-const baseLogger = winston.createLogger({
-  level: 'debug',
-  format: winston.format.combine(
-    winston.format.timestamp({ format: 'HH:mm:ss' }),
-    winston.format.colorize(),
-    winston.format.printf(({ level, message, timestamp, ...meta }) => {
-      const detail = Object.keys(meta).length ? ` ${JSON.stringify(meta)}` : '';
-      return `[${timestamp}] ${level}: ${message}${detail}`;
-    })
-  ),
-  transports: [new winston.transports.Console()]
-});
+const isDev = process.env.NODE_ENV !== 'production';
 
-const shouldLog = () => process.env.NODE_ENV === 'development';
+const transports = [
+  new winston.transports.Console({
+    format: winston.format.combine(
+      winston.format.timestamp(),
+      winston.format.colorize({ all: isDev }),
+      winston.format.printf(({ timestamp, level, message, ...meta }) => {
+        const metaStr = Object.keys(meta).length ? JSON.stringify(meta) : '';
+        return `[${timestamp}] ${level}: ${message} ${metaStr}`;
+      })
+    )
+  })
+];
 
-const logger = {
-  debug: (message, meta) => {
-    if (shouldLog()) baseLogger.debug(message, meta);
-  },
-  info: (message, meta) => {
-    if (shouldLog()) baseLogger.info(message, meta);
-  },
-  warn: (message, meta) => {
-    if (shouldLog()) baseLogger.warn(message, meta);
-  },
-  error: (message, meta) => {
-    if (shouldLog()) baseLogger.error(message, meta);
+if (isDev) {
+  try {
+    const fs = await import('node:fs');
+    fs.mkdirSync('./logs', { recursive: true });
+    transports.push(
+      new winston.transports.File({ filename: './logs/error.log', level: 'error' }),
+      new winston.transports.File({ filename: './logs/combined.log' })
+    );
+  } catch (error) {
+    process.stderr.write(`Could not create log files: ${error.message}\n`);
   }
-};
+}
+
+const logger = winston.createLogger({
+  level: isDev ? 'debug' : 'info',
+  format: winston.format.combine(
+    winston.format.timestamp(),
+    winston.format.errors({ stack: true }),
+    winston.format.json()
+  ),
+  transports,
+  exitOnError: false
+});
 
 export default logger;

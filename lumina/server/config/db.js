@@ -2,55 +2,42 @@ import mongoose from 'mongoose';
 import dns from 'node:dns';
 import logger from '../utils/logger.js';
 
-const connectionOptions = {
-  maxPoolSize: 10,
-  serverSelectionTimeoutMS: 5000,
-  socketTimeoutMS: 45000
-};
-
-let reconnectTimer = null;
+let listenersAttached = false;
 
 const connectDB = async () => {
   const uri = process.env.MONGODB_URI;
-  if (!uri) {
-    if (process.env.NODE_ENV === 'production') {
-      throw new Error('MONGODB_URI is not configured');
-    }
-    logger.warn('MONGODB_URI missing; using in-memory development store.');
-    return false;
-  }
+  if (!uri) throw new Error('MONGODB_URI is not configured');
 
-  mongoose.set('strictQuery', true);
-
-  const dnsServers = process.env.MONGODB_DNS_SERVERS
-    || (process.platform === 'win32' && process.env.NODE_ENV !== 'production' ? '8.8.8.8,1.1.1.1' : '');
+  const dnsServers = process.env.MONGODB_DNS_SERVERS || '';
   if (dnsServers) {
     dns.setServers(dnsServers.split(',').map((server) => server.trim()).filter(Boolean));
   }
 
-  mongoose.connection.on('connected', () => {
-    logger.info(`MongoDB connected: ${mongoose.connection.host}`);
-  });
+  mongoose.set('strictQuery', true);
 
-  mongoose.connection.on('error', (error) => {
-    logger.error(`MongoDB connection error: ${error.message}`);
-  });
+  if (!listenersAttached) {
+    mongoose.connection.on('connected', () => {
+      logger.info('MongoDB connection established', { host: mongoose.connection.host });
+    });
 
-  mongoose.connection.on('disconnected', () => {
-    logger.warn('MongoDB disconnected. Reconnect will be attempted by the driver.');
-    if (reconnectTimer || process.env.NODE_ENV === 'production') return;
-    reconnectTimer = setTimeout(async () => {
-      reconnectTimer = null;
-      try {
-        await mongoose.connect(uri, connectionOptions);
-      } catch (error) {
-        logger.error(`MongoDB reconnect failed: ${error.message}`);
-      }
-    }, 5000);
-  });
+    mongoose.connection.on('error', (err) => {
+      logger.error('MongoDB connection error', { error: err.message });
+    });
 
-  await mongoose.connect(uri, connectionOptions);
-  return true;
+    mongoose.connection.on('disconnected', () => {
+      logger.warn('MongoDB disconnected - driver will attempt reconnect');
+    });
+
+    listenersAttached = true;
+  }
+
+  await mongoose.connect(uri, {
+    maxPoolSize: 10,
+    serverSelectionTimeoutMS: 10000,
+    socketTimeoutMS: 45000,
+    connectTimeoutMS: 10000,
+    retryWrites: true
+  });
 };
 
 export default connectDB;

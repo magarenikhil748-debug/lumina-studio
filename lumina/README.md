@@ -61,6 +61,7 @@ GEMINI_API_KEY=your_gemini_api_key
 GEMINI_MODEL=gemini-2.5-flash
 NODE_ENV=development
 CLIENT_URL=http://localhost:5173,http://127.0.0.1:5173
+COOKIE_SECURE=false
 COOKIE_SAME_SITE=lax
 COOKIE_DOMAIN=
 JWT_ACCESS_SECRET=generate_a_64_char_random_string_here
@@ -117,7 +118,7 @@ Do not commit real credentials. MongoDB URLs and Gemini API keys are private acc
 
 ### Vercel Frontend
 
-- Root directory: `client`
+- Root directory: `lumina/client`
 - Build command: `npm run build`
 - Output directory: `dist`
 - Add `VITE_API_URL=https://your-railway-api.up.railway.app/api`
@@ -126,11 +127,11 @@ Do not commit real credentials. MongoDB URLs and Gemini API keys are private acc
 
 ### Railway Backend
 
-- Root directory: `server`
+- Root directory: `lumina/server`
 - Start command: `node server.js`
-- Add `PORT`, `MONGODB_URI`, `GEMINI_API_KEY`, `NODE_ENV=production`, `CLIENT_URL`, JWT secrets, and Google OAuth secrets.
+- Add `MONGODB_URI`, `GEMINI_API_KEY`, `NODE_ENV=production`, `CLIENT_URL`, `COOKIE_SAME_SITE=none`, `COOKIE_SECURE=true`, JWT secrets, and Google OAuth secrets.
 - Set `CLIENT_URL` to your Vercel URL. Multiple origins can be comma-separated.
-- `server/railway.json` includes the start command and restart policy.
+- `server/railway.toml` and `server/railway.json` include the start command, health check, and restart policy.
 
 ## Production CORS
 

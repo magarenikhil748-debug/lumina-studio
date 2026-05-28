@@ -14,9 +14,12 @@ export const getJwtSecret = (key) => {
 
 const cookieBase = () => {
   const sameSite = process.env.COOKIE_SAME_SITE || (process.env.NODE_ENV === 'production' ? 'none' : 'lax');
+  const secure = process.env.COOKIE_SECURE
+    ? process.env.COOKIE_SECURE === 'true'
+    : process.env.NODE_ENV === 'production' || sameSite === 'none';
   const options = {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production' || sameSite === 'none',
+    secure,
     sameSite
   };
   if (process.env.COOKIE_DOMAIN) options.domain = process.env.COOKIE_DOMAIN;
