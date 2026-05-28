@@ -12,7 +12,7 @@ Tagline: **AI portfolios that get you noticed.**
 - Preview studio with Minimal, Bold, Creative, Editorial, and Premium layouts, device preview, palette switcher, one-click regenerate controls, watermark logic, upgrade CTA, copy HTML, download HTML, and copy JSON.
 - Public share route `/p/:slug` with dynamic document title, description, OpenGraph tags, and view tracking.
 - Cookie-based authentication with email/password, Google OAuth structure, protected dashboard, user-owned portfolios, monthly free-generation limits, and Pro bypass rules.
-- SaaS dashboard architecture for owned portfolios, view/export counters, quality metrics, and future Stripe subscription state.
+- SaaS dashboard architecture for owned portfolios, view/export counters, quality metrics, and Stripe subscription state.
 - Express API with Helmet, CORS allowlist, rate limiting, input sanitization, URL/email validation, body-size limits, centralized error handling, and production-safe logging.
 - MongoDB Atlas-ready schema with an in-memory local development fallback when `MONGODB_URI` is not configured.
 - Deployment-ready config for Vercel frontend and Railway backend.
@@ -24,6 +24,8 @@ Tagline: **AI portfolios that get you noticed.**
 - Deployment: Vercel frontend, Railway backend
 
 ## Local Setup
+
+Use Node.js `20.19.0` or newer for the frontend. Vite 8 requires this runtime range, and Vercel should use a matching Node version for production builds.
 
 Install frontend dependencies:
 
@@ -168,20 +170,13 @@ Avoid `*` in production because the API uses credential-ready CORS behavior.
 6. Set `STRIPE_WEBHOOK_SECRET` from the webhook signing secret.
 7. Add a Redis service and set `REDIS_URL` so BullMQ can schedule 3-day payment-failure grace-period downgrades.
 
-## Future Stripe Structure
-
-The frontend already models `free`, `pro`, and `studio` plan states, upgrade nudges, watermark logic, and dashboard plan cards. A Stripe integration can attach checkout sessions to plan upgrades without rewriting the portfolio builder.
-
-Suggested future backend routes:
-
-- `POST /api/billing/create-checkout-session`
-- `POST /api/billing/webhook`
-- `GET /api/billing/subscription`
-
 ## Troubleshooting
 
 - Frontend cannot reach backend: confirm `VITE_API_URL` points to the backend `/api` base URL.
-- CORS error: add the frontend origin to `CLIENT_URL` on the backend.
+- CORS error: add the frontend origin to `CLIENT_URL` on the backend. Trailing slashes are normalized, but the domain must still match.
+- Login cookie does not persist on Vercel/Railway: set `COOKIE_SAME_SITE=none` and `COOKIE_SECURE=true` on Railway, then redeploy.
+- Google OAuth returns an error: confirm the Google OAuth redirect URI exactly matches `GOOGLE_CALLBACK_URL`.
+- Pricing page is not visible after deploy: confirm Vercel redeployed the latest commit and visit `/pricing`.
 - Gemini returns fallback content: confirm `GEMINI_API_KEY` exists on the server and the key is enabled.
 - Portfolio does not persist after restart: configure `MONGODB_URI`; the in-memory store is development-only.
 - Vite port changes to 5174: add `http://localhost:5174` to `CLIENT_URL` during local testing.

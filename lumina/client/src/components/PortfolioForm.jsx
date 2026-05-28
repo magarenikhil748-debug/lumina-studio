@@ -100,7 +100,7 @@ const PortfolioForm = ({ onComplete, isGenerating, onStepChange }) => {
   const submit = () => {
     const payload = {
       ...draft,
-      projects: (draft.projects || []).map(({ id, ...project }) => project).filter((project) => project.title.trim()),
+      projects: (draft.projects || []).map(({ id: _id, ...project }) => project).filter((project) => project.title.trim()),
       qualityScore: quality.score,
       suggestions: quality.suggestions
     };

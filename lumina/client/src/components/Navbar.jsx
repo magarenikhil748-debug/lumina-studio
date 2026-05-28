@@ -2,7 +2,7 @@ import PropTypes from 'prop-types';
 import { useEffect, useRef, useState } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
 import { Link, NavLink } from 'react-router-dom';
-import { ArrowRight, Eye, LayoutDashboard, LogOut, UserRound } from 'lucide-react';
+import { ArrowRight, CreditCard, Eye, LayoutDashboard, LogOut, Sparkles, UserRound } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext';
 
@@ -40,6 +40,7 @@ const Navbar = ({ compact = false }) => {
         <div className="flex items-center gap-2 text-sm text-white/50">
           {!compact && <NavLink className="hidden rounded-full px-4 py-2 hover:bg-white/[0.05] hover:text-white sm:inline-flex" to="/">Home</NavLink>}
           {!compact && <NavLink className="hidden items-center gap-2 rounded-full px-4 py-2 hover:bg-white/[0.05] hover:text-white sm:inline-flex" to="/preview"><Eye className="h-4 w-4" /> Preview</NavLink>}
+          {!compact && <NavLink className="hidden items-center gap-2 rounded-full px-4 py-2 hover:bg-white/[0.05] hover:text-white md:inline-flex" to="/pricing"><CreditCard className="h-4 w-4" /> Pricing</NavLink>}
           {!compact && isAuthenticated && <NavLink className="hidden rounded-full px-4 py-2 hover:bg-white/[0.05] hover:text-white md:inline-flex" to="/dashboard">Dashboard</NavLink>}
 
           {!isAuthenticated ? (
@@ -76,6 +77,7 @@ const Navbar = ({ compact = false }) => {
                   </div>
                   <Link onClick={() => setOpen(false)} to="/dashboard" className="flex items-center gap-3 rounded-xl px-3 py-2 font-semibold text-white/75 hover:bg-white/[0.06] hover:text-white" role="menuitem"><LayoutDashboard className="h-4 w-4" />Dashboard</Link>
                   <Link onClick={() => setOpen(false)} to="/dashboard" className="flex items-center gap-3 rounded-xl px-3 py-2 font-semibold text-white/75 hover:bg-white/[0.06] hover:text-white" role="menuitem"><UserRound className="h-4 w-4" />My Portfolios</Link>
+                  <Link onClick={() => setOpen(false)} to="/pricing" className="flex items-center gap-3 rounded-xl px-3 py-2 font-semibold text-white/75 hover:bg-white/[0.06] hover:text-white" role="menuitem"><Sparkles className="h-4 w-4" />Plans & Billing</Link>
                   <div className="my-2 h-px bg-white/[0.08]" />
                   <button onClick={handleLogout} className="flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left font-semibold text-red-300 hover:bg-red-400/10" role="menuitem"><LogOut className="h-4 w-4" />Logout</button>
                 </motion.div>

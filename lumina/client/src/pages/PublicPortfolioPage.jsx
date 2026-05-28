@@ -38,7 +38,7 @@ const OwnerToolbar = ({ portfolio, onShare, onAnalytics, onToggle }) => {
     >
       <div className="mx-auto flex max-w-7xl flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <p className="flex items-center gap-2 text-sm font-bold text-white/75">
-          <Eye className="h-4 w-4 text-[#c4b5fd]" aria-hidden="true" /> You're viewing your public portfolio
+          <Eye className="h-4 w-4 text-[#c4b5fd]" aria-hidden="true" /> You&apos;re viewing your public portfolio
         </p>
         <div className="flex flex-wrap gap-2">
           <button type="button" onClick={onToggle} className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-black ${portfolio.isPublic ? 'bg-emerald-400/14 text-emerald-200' : 'bg-white/[0.08] text-white/65'}`} aria-label="Toggle public portfolio visibility">

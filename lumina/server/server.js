@@ -27,9 +27,19 @@ const requiredEnvVars = [
   'GEMINI_API_KEY'
 ];
 
+const normalizeOrigin = (value = '') => {
+  const trimmed = String(value).trim().replace(/\/+$/, '');
+  if (!trimmed) return '';
+  try {
+    return new URL(trimmed).origin;
+  } catch {
+    return trimmed;
+  }
+};
+
 const parseOrigins = (value) => value
   .split(',')
-  .map((origin) => origin.trim())
+  .map(normalizeOrigin)
   .filter(Boolean);
 
 const buildConfig = () => {

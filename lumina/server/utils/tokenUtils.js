@@ -13,10 +13,10 @@ export const getJwtSecret = (key) => {
 };
 
 const cookieBase = () => {
-  const sameSite = process.env.COOKIE_SAME_SITE || (process.env.NODE_ENV === 'production' ? 'none' : 'lax');
-  const secure = process.env.COOKIE_SECURE
+  const sameSite = String(process.env.COOKIE_SAME_SITE || (process.env.NODE_ENV === 'production' ? 'none' : 'lax')).toLowerCase();
+  const secure = sameSite === 'none' || (process.env.COOKIE_SECURE
     ? process.env.COOKIE_SECURE === 'true'
-    : process.env.NODE_ENV === 'production' || sameSite === 'none';
+    : process.env.NODE_ENV === 'production');
   const options = {
     httpOnly: true,
     secure,

@@ -10,6 +10,15 @@ const nextMonthStart = () => {
 
 const avatarForName = (name) => `https://api.dicebear.com/8.x/initials/svg?seed=${encodeURIComponent(name)}`;
 
+const clientUrl = () => {
+  const raw = (process.env.CLIENT_URL || 'http://localhost:5173').split(',')[0].trim().replace(/\/+$/, '');
+  try {
+    return new URL(raw).origin;
+  } catch {
+    return raw || 'http://localhost:5173';
+  }
+};
+
 const issueSession = (res, user) => {
   const id = String(user._id || user.id);
   const tier = user.tier || 'free';
@@ -123,7 +132,7 @@ export const getMe = async (req, res, next) => {
 export const googleCallback = async (req, res, next) => {
   try {
     issueSession(res, req.user);
-    res.redirect(`${process.env.CLIENT_URL || 'http://localhost:5173'}/dashboard`);
+    res.redirect(`${clientUrl()}/dashboard`);
   } catch (error) {
     next(error);
   }

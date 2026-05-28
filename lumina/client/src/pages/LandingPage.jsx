@@ -212,7 +212,10 @@ const LandingPage = () => {
                   {plan.features.map((feature) => <p key={feature} className="flex items-center gap-3 text-white/80"><Check className="h-4 w-4 text-[#60a5fa]" />{feature}</p>)}
                 </div>
                 <motion.div whileHover={reduceMotion ? undefined : { scale: 1.05 }} whileTap={reduceMotion ? undefined : { scale: 0.97 }} transition={{ type: 'spring', stiffness: 420, damping: 24 }}>
-                  <Link to="/build" className="btn-primary mt-8 inline-flex w-full items-center justify-center gap-2 rounded-full px-5 py-3 font-bold">Choose {plan.name}<ArrowRight className="h-4 w-4" /></Link>
+                  <Link to={plan.id === 'free' ? '/build' : '/pricing'} className="btn-primary mt-8 inline-flex w-full items-center justify-center gap-2 rounded-full px-5 py-3 font-bold">
+                    {plan.id === 'free' ? 'Build Free' : `Upgrade to ${plan.name}`}
+                    <ArrowRight className="h-4 w-4" />
+                  </Link>
                 </motion.div>
               </motion.article>
             ))}
@@ -255,7 +258,7 @@ const LandingPage = () => {
                 className="rounded-2xl border border-white/[0.08] bg-[rgba(255,255,255,0.05)] p-6 backdrop-blur-xl"
               >
                 <div className="mb-5 flex gap-1 text-[#ec4899]">{Array.from({ length: 5 }, (_, index) => <Star key={index} className="h-4 w-4 fill-current" />)}</div>
-                <p className="leading-7 text-white/80">"{item.quote}"</p>
+                <p className="leading-7 text-white/80">&ldquo;{item.quote}&rdquo;</p>
                 <p className="mt-5 font-bold text-white">{item.name}</p>
                 <p className="text-sm text-white/50">{item.role}</p>
               </motion.article>
