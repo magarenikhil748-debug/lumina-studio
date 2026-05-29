@@ -48,7 +48,7 @@ const userSchema = new mongoose.Schema({
       return avatarForName(this.name);
     }
   },
-  tier: { type: String, enum: ['free', 'pro'], default: 'free' },
+  tier: { type: String, enum: ['free', 'pro', 'studio'], default: 'free' },
   stripeCustomerId: { type: String, default: null, index: true },
   stripeSubscriptionId: { type: String, default: null, index: true },
   plan: { type: String, enum: ['starter', 'pro', 'studio'], default: 'starter' },

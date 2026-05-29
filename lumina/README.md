@@ -52,6 +52,8 @@ Create `client/.env` locally:
 ```env
 VITE_API_URL=http://localhost:5000/api
 VITE_CLIENT_URL=http://localhost:5173
+VITE_PUBLIC_SITE_URL=http://localhost:5173
+VITE_STRIPE_PUBLISHABLE_KEY=pk_test_your_stripe_publishable_key
 ```
 
 Create `server/.env` locally:
@@ -116,8 +118,12 @@ Do not commit real credentials. MongoDB URLs and Gemini API keys are private acc
 - `GET /api/auth/google`
 - `GET /api/auth/google/callback`
 - `GET /api/billing/plans`
+- `GET /api/billing/prices`
+- `GET /api/billing/status`
+- `GET /api/billing/history`
 - `POST /api/billing/checkout`
 - `POST /api/billing/portal`
+- `POST /api/billing/webhook`
 - `POST /api/webhooks/stripe`
 - `GET /api/user/plan`
 - `POST /api/gemini/generate`
@@ -165,8 +171,8 @@ Avoid `*` in production because the API uses credential-ready CORS behavior.
 1. Create four active recurring prices in Stripe: Pro monthly, Pro annual, Studio monthly, and Studio annual.
 2. Set the matching price IDs in Railway.
 3. Configure Stripe Customer Portal to allow plan switching between those active prices, payment method updates, invoice history, and cancellation.
-4. Add a Stripe webhook endpoint pointing to `https://your-railway-api.up.railway.app/api/webhooks/stripe`.
-5. Subscribe the webhook to `checkout.session.completed`, `customer.subscription.updated`, `customer.subscription.deleted`, `invoice.payment_failed`, and `invoice.paid`.
+4. Add a Stripe webhook endpoint pointing to `https://your-railway-api.up.railway.app/api/billing/webhook`. The legacy `/api/webhooks/stripe` path is also supported.
+5. Subscribe the webhook to `checkout.session.completed`, `customer.subscription.created`, `customer.subscription.updated`, `customer.subscription.deleted`, `invoice.payment_failed`, and `invoice.payment_succeeded`.
 6. Set `STRIPE_WEBHOOK_SECRET` from the webhook signing secret.
 7. Add a Redis service and set `REDIS_URL` so BullMQ can schedule 3-day payment-failure grace-period downgrades.
 

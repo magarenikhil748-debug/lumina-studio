@@ -1,16 +1,15 @@
 import PropTypes from 'prop-types';
 import { useEffect, useMemo, useState } from 'react';
 import { animate, motion, useMotionValue, useReducedMotion, useSpring } from 'framer-motion';
-import { ArrowRight, BadgeCheck, BrainCircuit, Calculator, Check, Eye, LayoutTemplate, Palette, ShieldCheck, Sparkles, Star, Workflow } from 'lucide-react';
+import { ArrowRight, BadgeCheck, BrainCircuit, Calculator, Eye, LayoutTemplate, Palette, ShieldCheck, Sparkles, Star, Workflow } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { Link } from 'react-router-dom';
 import AnimatedBackground from '../components/AnimatedBackground';
 import FeatureCard from '../components/FeatureCard';
 import Footer from '../components/Footer';
 import Hero from '../components/Hero';
 import Navbar from '../components/Navbar';
+import PricingTable from '../components/billing/PricingTable';
 import { joinWaitlist } from '../utils/api';
-import { plans } from '../utils/helpers';
 
 const features = [
   { icon: BrainCircuit, title: 'Narrative Engine', description: 'Bio variations, project rewrites, and portfolio taglines tuned for your audience.', accent: '#a855f7' },
@@ -191,37 +190,7 @@ const LandingPage = () => {
         </div>
       </motion.section>
 
-      <motion.section {...sectionMotion(reduceMotion)} className="px-4 py-24">
-        <div className="mx-auto max-w-6xl">
-          <SectionHeading eyebrow="Pricing" title="Start free. Upgrade when your portfolio starts working." copy="Plans are designed around portfolio velocity, export control, and client-facing polish." />
-          <motion.div variants={gridVariants} initial={reduceMotion ? false : 'hidden'} whileInView="show" viewport={{ once: true }} className="grid gap-5 lg:grid-cols-3">
-            {Object.values(plans).map((plan) => (
-              <motion.article
-                key={plan.id}
-                variants={cardVariants}
-                transition={reduceMotion ? { duration: 0 } : { type: 'spring', stiffness: 320, damping: 26 }}
-                whileHover={cardHover(reduceMotion)}
-                className={`rounded-2xl border p-6 backdrop-blur-xl ${plan.id === 'pro' ? 'border-[#a855f7]/40 bg-[rgba(255,255,255,0.05)] shadow-[0_0_40px_rgba(168,85,247,0.22)]' : 'border-white/[0.08] bg-[rgba(255,255,255,0.05)]'}`}
-              >
-                <div className="mb-6 flex items-center justify-between">
-                  <h3 className="font-display text-2xl font-black text-white">{plan.name}</h3>
-                  <span className="rounded-full bg-white/[0.08] px-3 py-1 text-xs font-bold text-[#c4b5fd]">{plan.badge}</span>
-                </div>
-                <p className="font-display text-4xl font-black">{plan.price}<span className="text-base font-semibold text-white/50">/{plan.cadence}</span></p>
-                <div className="mt-6 space-y-3">
-                  {plan.features.map((feature) => <p key={feature} className="flex items-center gap-3 text-white/80"><Check className="h-4 w-4 text-[#60a5fa]" />{feature}</p>)}
-                </div>
-                <motion.div whileHover={reduceMotion ? undefined : { scale: 1.05 }} whileTap={reduceMotion ? undefined : { scale: 0.97 }} transition={{ type: 'spring', stiffness: 420, damping: 24 }}>
-                  <Link to={plan.id === 'free' ? '/build' : '/pricing'} className="btn-primary mt-8 inline-flex w-full items-center justify-center gap-2 rounded-full px-5 py-3 font-bold">
-                    {plan.id === 'free' ? 'Build Free' : `Upgrade to ${plan.name}`}
-                    <ArrowRight className="h-4 w-4" />
-                  </Link>
-                </motion.div>
-              </motion.article>
-            ))}
-          </motion.div>
-        </div>
-      </motion.section>
+      <PricingTable compact />
 
       <motion.section {...sectionMotion(reduceMotion)} className="px-4 py-24">
         <div className="mx-auto grid max-w-6xl gap-6 lg:grid-cols-[0.85fr_1.15fr] lg:items-center">

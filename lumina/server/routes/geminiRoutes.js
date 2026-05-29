@@ -16,7 +16,7 @@ const nextMonthStart = () => {
 };
 
 const resetIfNeeded = async (user) => {
-  if (!user || user.tier === 'pro' || ['pro', 'studio'].includes(user.plan)) return user;
+  if (!user || ['pro', 'studio'].includes(user.tier) || ['pro', 'studio'].includes(user.plan)) return user;
   const resetAt = user.generationsResetAt ? new Date(user.generationsResetAt) : new Date(0);
   if (resetAt > new Date()) return user;
   user.generationsUsedThisMonth = 0;
@@ -46,7 +46,7 @@ const enforceGenerationLimit = async (req, res, next) => {
 };
 
 const incrementGenerationUsage = async (user) => {
-  if (!user || user.tier === 'pro' || ['pro', 'studio'].includes(user.plan)) return;
+  if (!user || ['pro', 'studio'].includes(user.tier) || ['pro', 'studio'].includes(user.plan)) return;
   user.generationsUsedThisMonth = Number(user.generationsUsedThisMonth || 0) + 1;
   if (usingDb()) await user.save();
   else saveDevUser(findDevUserById(user._id || user.id) || user);

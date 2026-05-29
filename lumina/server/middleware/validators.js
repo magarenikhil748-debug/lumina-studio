@@ -90,10 +90,19 @@ export const analyticsDaysQuery = [
 ];
 
 export const billingCheckoutValidators = [
+  body()
+    .custom((value) => Boolean(value?.planId || value?.priceId))
+    .withMessage('Plan or Stripe price ID is required'),
   body('planId')
+    .optional({ values: 'falsy' })
     .customSanitizer(strip)
     .isIn(['pro', 'studio'])
     .withMessage('Plan must be Pro or Studio'),
+  body('priceId')
+    .optional({ values: 'falsy' })
+    .customSanitizer(strip)
+    .matches(/^price_[A-Za-z0-9_]+$/)
+    .withMessage('Stripe price ID is not valid'),
   body('billingCycle')
     .optional({ values: 'falsy' })
     .customSanitizer(strip)

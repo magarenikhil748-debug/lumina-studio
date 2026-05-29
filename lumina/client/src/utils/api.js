@@ -112,19 +112,40 @@ export const billingAPI = {
     const { data } = await api.get('/billing/plans', { skipAuthRedirect: true });
     return data.data;
   },
+  getPrices: async () => {
+    const { data } = await api.get('/billing/prices', { skipAuthRedirect: true });
+    return data;
+  },
+  getStatus: async () => {
+    const { data } = await api.get('/billing/status');
+    return data.data;
+  },
   checkout: async (payload) => {
+    const { data } = await api.post('/billing/checkout', payload);
+    return data;
+  },
+  createCheckout: async (priceIdOrPayload) => {
+    const payload = typeof priceIdOrPayload === 'string' ? { priceId: priceIdOrPayload } : priceIdOrPayload;
     const { data } = await api.post('/billing/checkout', payload);
     return data;
   },
   portal: async () => {
     const { data } = await api.post('/billing/portal');
     return data;
+  },
+  createPortal: async () => {
+    const { data } = await api.post('/billing/portal');
+    return data;
+  },
+  history: async () => {
+    const { data } = await api.get('/billing/history');
+    return data.data;
   }
 };
 
 export const userAPI = {
   getPlan: async () => {
-    const { data } = await api.get('/user/plan', { skipAuthRedirect: true, skipRefresh: true });
+    const { data } = await api.get('/user/plan', { skipAuthRedirect: true });
     return data.data;
   }
 };

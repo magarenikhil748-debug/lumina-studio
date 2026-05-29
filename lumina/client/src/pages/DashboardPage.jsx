@@ -8,6 +8,8 @@ import AnalyticsDrawer from '../components/AnalyticsDrawer';
 import AnimatedBackground from '../components/AnimatedBackground';
 import Navbar from '../components/Navbar';
 import ShareModal from '../components/ShareModal';
+import TierBadge from '../components/TierBadge';
+import UsageMeter from '../components/UsageMeter';
 import BillingDashboard from '../components/billing/BillingDashboard';
 import { useAuth } from '../context/AuthContext';
 import { portfolioAPI } from '../utils/api';
@@ -222,12 +224,19 @@ const DashboardPage = () => {
               <p className="text-sm font-bold text-[#c4b5fd]">Welcome back</p>
               <h1 className="text-3xl font-black text-white sm:text-4xl">{user?.name}</h1>
               <div className="mt-3 flex flex-wrap items-center gap-2">
-                <span className={`rounded-full px-3 py-1 text-xs font-bold uppercase ${user?.plan !== 'starter' ? 'btn-primary' : 'bg-white/[0.08] text-white/60'}`}>{user?.plan || 'starter'}</span>
+                <TierBadge
+                  plan={user?.plan}
+                  subscriptionStatus={user?.subscriptionStatus}
+                  trialEndsAt={user?.trialEndsAt}
+                  inGracePeriod={user?.inGracePeriod}
+                  gracePeriodEndsAt={user?.gracePeriodEndsAt}
+                />
                 {user?.plan === 'starter' && <span className="text-sm text-white/50">Generations this month: {user?.generationsUsedThisMonth || 0}/3</span>}
               </div>
             </div>
           </div>
           <div className="flex flex-wrap gap-2">
+            <Link to="/dashboard/billing" className="rounded-full border border-white/[0.08] px-5 py-3 font-bold text-white hover:bg-white/[0.06]">Billing</Link>
             {user?.plan === 'starter' && <Link to="/pricing" className="rounded-full border border-white/[0.08] px-5 py-3 font-bold text-white hover:bg-white/[0.06]">Upgrade Plan</Link>}
             <Link to="/build" className="btn-primary inline-flex items-center justify-center gap-2 rounded-full px-5 py-3 font-bold"><Plus className="h-4 w-4" />New portfolio</Link>
           </div>
@@ -236,6 +245,18 @@ const DashboardPage = () => {
         <div className="mb-8">
           <BillingDashboard />
         </div>
+
+        {user?.plan === 'starter' && (
+          <div className="mb-8">
+            <UsageMeter
+              generationsUsed={user?.generationsUsedThisMonth || 0}
+              generationsLimit={3}
+              portfolioCount={portfolios.length}
+              portfolioLimit={1}
+              resetsAt={user?.generationsResetAt}
+            />
+          </div>
+        )}
 
         <section className="mb-8 grid gap-4 sm:grid-cols-3">
           {[

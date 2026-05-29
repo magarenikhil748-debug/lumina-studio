@@ -1,5 +1,5 @@
 import PropTypes from 'prop-types';
-import { createContext, useContext, useEffect, useMemo, useReducer } from 'react';
+import { createContext, useContext, useEffect, useMemo, useReducer, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { API_URL, authAPI } from '../utils/api';
 
@@ -29,10 +29,14 @@ const reducer = (state, action) => {
 
 export const AuthProvider = ({ children }) => {
   const [state, dispatch] = useReducer(reducer, initialState);
+  const authActionVersion = useRef(0);
   const navigate = useNavigate();
 
   useEffect(() => {
-    const clearUser = () => dispatch({ type: 'CLEAR_USER' });
+    const clearUser = () => {
+      authActionVersion.current += 1;
+      dispatch({ type: 'CLEAR_USER' });
+    };
     window.addEventListener('lumina-auth-clear', clearUser);
     return () => window.removeEventListener('lumina-auth-clear', clearUser);
   }, []);
@@ -40,14 +44,15 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     let active = true;
     const checkSession = async () => {
+      const requestVersion = authActionVersion.current;
       dispatch({ type: 'SET_LOADING', payload: true });
       try {
-        const response = await authAPI.getMe({ skipAuthRedirect: true, skipRefresh: true });
-        if (active) dispatch({ type: 'SET_USER', payload: response.user });
+        const response = await authAPI.getMe({ skipAuthRedirect: true });
+        if (active && requestVersion === authActionVersion.current) dispatch({ type: 'SET_USER', payload: response.user });
       } catch (error) {
-        if (active) dispatch({ type: 'CLEAR_USER' });
+        if (active && requestVersion === authActionVersion.current) dispatch({ type: 'CLEAR_USER' });
       } finally {
-        if (active) dispatch({ type: 'SET_LOADING', payload: false });
+        if (active && requestVersion === authActionVersion.current) dispatch({ type: 'SET_LOADING', payload: false });
       }
     };
     checkSession();
@@ -61,6 +66,7 @@ export const AuthProvider = ({ children }) => {
     login: async (email, password) => {
       try {
         const response = await authAPI.login({ email, password });
+        authActionVersion.current += 1;
         dispatch({ type: 'SET_USER', payload: response.user });
         return response.user;
       } catch (error) {
@@ -72,6 +78,7 @@ export const AuthProvider = ({ children }) => {
     register: async (name, email, password) => {
       try {
         const response = await authAPI.register({ name, email, password });
+        authActionVersion.current += 1;
         dispatch({ type: 'SET_USER', payload: response.user });
         return response.user;
       } catch (error) {
@@ -81,6 +88,7 @@ export const AuthProvider = ({ children }) => {
       }
     },
     logout: async () => {
+      authActionVersion.current += 1;
       sessionStorage.setItem('lumina-logging-out', '1');
       try {
         await authAPI.logout();

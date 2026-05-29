@@ -73,20 +73,22 @@ const BillingDashboard = () => {
       )}
 
       <div className="mt-5 flex flex-wrap gap-3">
-        <button
-          type="button"
-          onClick={openPortal}
-          disabled={isOpeningPortal}
-          className="inline-flex items-center gap-2 rounded-full bg-white px-5 py-3 text-sm font-black text-[#0a0a0f] disabled:opacity-60"
-        >
-          {isOpeningPortal ? <Loader2 className="h-4 w-4 animate-spin" /> : <CreditCard className="h-4 w-4" />}
-          Manage Billing
-        </button>
-        {plan.plan === 'starter' && (
+        {plan.plan !== 'starter' && (
+          <button
+            type="button"
+            onClick={openPortal}
+            disabled={isOpeningPortal}
+            className="inline-flex items-center gap-2 rounded-full bg-white px-5 py-3 text-sm font-black text-[#0a0a0f] disabled:opacity-60"
+          >
+            {isOpeningPortal ? <Loader2 className="h-4 w-4 animate-spin" /> : <CreditCard className="h-4 w-4" />}
+            Manage Billing
+          </button>
+        )}
+        {plan.plan === 'starter' ? (
           <Link to="/pricing" className="inline-flex items-center rounded-full border border-white/[0.08] px-5 py-3 text-sm font-black text-white hover:bg-white/[0.06]">
             Upgrade Plan
           </Link>
-        )}
+        ) : null}
       </div>
     </section>
   );

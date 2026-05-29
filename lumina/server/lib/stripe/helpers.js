@@ -72,7 +72,7 @@ export const syncSubscriptionToUser = async (subscription, userId) => {
     user.stripeCustomerId = typeof subscription.customer === 'string' ? subscription.customer : subscription.customer?.id || user.stripeCustomerId;
     user.stripeSubscriptionId = subscription.id;
     user.plan = shouldKeepPaidAccess ? plan : 'starter';
-    user.tier = shouldKeepPaidAccess && plan !== 'starter' ? 'pro' : 'free';
+    user.tier = shouldKeepPaidAccess && plan !== 'starter' ? plan : 'free';
     user.billingCycle = billingCycle;
     user.subscriptionStatus = status;
     user.currentPeriodStart = toDate(periodStart);

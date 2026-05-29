@@ -17,7 +17,7 @@ export const aiLimiter = rateLimit({
   limit: 10,
   standardHeaders: 'draft-7',
   legacyHeaders: false,
-  skip: (req) => req.user?.tier === 'pro' || ['pro', 'studio'].includes(req.user?.plan),
+  skip: (req) => ['pro', 'studio'].includes(req.user?.tier) || ['pro', 'studio'].includes(req.user?.plan),
   handler: jsonHandler('Too many AI requests. Please wait a minute and try again.')
 });
 

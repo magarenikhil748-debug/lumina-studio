@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useAuth } from '../context/AuthContext';
 import { userAPI } from '../utils/api';
 
 const fallbackPlan = {
@@ -16,6 +17,7 @@ const fallbackPlan = {
 };
 
 export const usePlan = () => {
+  const { isAuthenticated, isLoading: isAuthLoading } = useAuth();
   const [state, setState] = useState({ ...fallbackPlan });
 
   const fetchPlan = useCallback(async () => {
@@ -40,8 +42,16 @@ export const usePlan = () => {
   }, []);
 
   useEffect(() => {
+    if (isAuthLoading) {
+      setState((current) => ({ ...current, isLoading: true, error: null }));
+      return;
+    }
+    if (!isAuthenticated) {
+      setState({ ...fallbackPlan, isLoading: false });
+      return;
+    }
     fetchPlan();
-  }, [fetchPlan]);
+  }, [fetchPlan, isAuthenticated, isAuthLoading]);
 
   return useMemo(() => {
     const limits = state.planLimits || state.limits || {};

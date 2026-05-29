@@ -172,6 +172,7 @@ async function startServer() {
     app.use(cors(corsOptions));
     app.options('*', cors(corsOptions));
     app.use('/api/webhooks/stripe', stripeWebhookRoutes);
+    app.use('/api/billing/webhook', stripeWebhookRoutes);
     app.use(generalLimiter);
     app.use(express.json({ limit: '750kb' }));
     app.use(express.urlencoded({ extended: true, limit: '750kb' }));

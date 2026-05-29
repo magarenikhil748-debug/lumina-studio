@@ -90,10 +90,10 @@ export const handleStripeWebhook = async (req, res) => {
   try {
     let user = null;
     if (event.type === 'checkout.session.completed') user = await handleCheckoutCompleted(event.data.object);
-    if (event.type === 'customer.subscription.updated') user = await handleSubscriptionUpdated(event.data.object);
+    if (event.type === 'customer.subscription.created' || event.type === 'customer.subscription.updated') user = await handleSubscriptionUpdated(event.data.object);
     if (event.type === 'customer.subscription.deleted') user = await handleSubscriptionDeleted(event.data.object);
     if (event.type === 'invoice.payment_failed') user = await handleInvoicePaymentFailed(event.data.object);
-    if (event.type === 'invoice.paid') user = await handleInvoicePaid(event.data.object);
+    if (event.type === 'invoice.paid' || event.type === 'invoice.payment_succeeded') user = await handleInvoicePaid(event.data.object);
 
     logger.info('[WEBHOOK] Event handled', { type: event.type, userId: userIdOf(user) || 'unresolved' });
     res.json({ received: true });

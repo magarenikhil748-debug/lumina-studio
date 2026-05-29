@@ -5,6 +5,7 @@ import { Link, NavLink } from 'react-router-dom';
 import { ArrowRight, CreditCard, Eye, LayoutDashboard, LogOut, Sparkles, UserRound } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext';
+import TierBadge from './TierBadge';
 
 const Navbar = ({ compact = false }) => {
   const reduceMotion = useReducedMotion();
@@ -22,7 +23,7 @@ const Navbar = ({ compact = false }) => {
 
   const handleLogout = async () => {
     await logout();
-    toast.success('See you soon! 👋');
+    toast.success('See you soon.');
   };
 
   return (
@@ -58,6 +59,11 @@ const Navbar = ({ compact = false }) => {
             </>
           ) : (
             <div ref={menuRef} className="relative">
+              {user?.plan === 'starter' && (
+                <Link to="/pricing" className="mr-2 hidden rounded-full border border-[#c4b5fd]/20 bg-[#a855f7]/14 px-4 py-2 text-sm font-black text-[#e9d5ff] hover:bg-[#a855f7]/22 md:inline-flex">
+                  Upgrade
+                </Link>
+              )}
               <button onClick={() => setOpen((current) => !current)} className="focus-ring flex items-center gap-2 rounded-full border border-white/[0.08] bg-white/[0.05] p-1 pr-3 text-white hover:bg-white/[0.08]" aria-expanded={open} aria-haspopup="menu">
                 <img className="h-8 w-8 rounded-full border border-white/[0.12] object-cover" src={user?.avatar || `https://api.dicebear.com/8.x/initials/svg?seed=${encodeURIComponent(user?.name || 'Lumina')}`} alt={`${user?.name || 'User'} avatar`} width="32" height="32" loading="lazy" />
                 <span className="hidden max-w-28 truncate text-sm font-bold sm:inline">{user?.name}</span>
@@ -72,12 +78,22 @@ const Navbar = ({ compact = false }) => {
                   role="menu"
                 >
                   <div className="px-3 py-3">
-                    <p className="truncate font-bold text-white">{user?.name}</p>
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="truncate font-bold text-white">{user?.name}</p>
+                      <TierBadge
+                        compact
+                        plan={user?.plan}
+                        subscriptionStatus={user?.subscriptionStatus}
+                        trialEndsAt={user?.trialEndsAt}
+                        inGracePeriod={user?.inGracePeriod}
+                        gracePeriodEndsAt={user?.gracePeriodEndsAt}
+                      />
+                    </div>
                     <p className="truncate text-sm text-white/45">{user?.email}</p>
                   </div>
                   <Link onClick={() => setOpen(false)} to="/dashboard" className="flex items-center gap-3 rounded-xl px-3 py-2 font-semibold text-white/75 hover:bg-white/[0.06] hover:text-white" role="menuitem"><LayoutDashboard className="h-4 w-4" />Dashboard</Link>
                   <Link onClick={() => setOpen(false)} to="/dashboard" className="flex items-center gap-3 rounded-xl px-3 py-2 font-semibold text-white/75 hover:bg-white/[0.06] hover:text-white" role="menuitem"><UserRound className="h-4 w-4" />My Portfolios</Link>
-                  <Link onClick={() => setOpen(false)} to="/pricing" className="flex items-center gap-3 rounded-xl px-3 py-2 font-semibold text-white/75 hover:bg-white/[0.06] hover:text-white" role="menuitem"><Sparkles className="h-4 w-4" />Plans & Billing</Link>
+                  <Link onClick={() => setOpen(false)} to="/dashboard/billing" className="flex items-center gap-3 rounded-xl px-3 py-2 font-semibold text-white/75 hover:bg-white/[0.06] hover:text-white" role="menuitem"><Sparkles className="h-4 w-4" />Plans & Billing</Link>
                   <div className="my-2 h-px bg-white/[0.08]" />
                   <button onClick={handleLogout} className="flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left font-semibold text-red-300 hover:bg-red-400/10" role="menuitem"><LogOut className="h-4 w-4" />Logout</button>
                 </motion.div>

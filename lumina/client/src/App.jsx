@@ -14,6 +14,8 @@ const PublicPortfolioPage = lazy(() => import('./pages/PublicPortfolioPage'));
 const DashboardPage = lazy(() => import('./pages/DashboardPage'));
 const LoginPage = lazy(() => import('./pages/LoginPage'));
 const PricingPage = lazy(() => import('./pages/PricingPage'));
+const BillingPage = lazy(() => import('./pages/BillingPage'));
+const BillingSuccessPage = lazy(() => import('./pages/BillingSuccessPage'));
 const NotFoundPage = lazy(() => import('./pages/NotFoundPage'));
 
 const AnimatedRoutes = () => {
@@ -37,6 +39,8 @@ const AnimatedRoutes = () => {
             <Route path="/pricing" element={<PricingPage />} />
             <Route element={<ProtectedRoute />}>
               <Route path="/dashboard" element={<DashboardPage />} />
+              <Route path="/dashboard/billing" element={<BillingPage />} />
+              <Route path="/dashboard/billing/success" element={<BillingSuccessPage />} />
             </Route>
             <Route path="/p/:slug" element={<PublicPortfolioPage />} />
             <Route path="*" element={<NotFoundPage />} />

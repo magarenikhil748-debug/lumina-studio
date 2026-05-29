@@ -100,8 +100,8 @@ const LoginPage = () => {
   }, [watchedPassword]);
 
   useEffect(() => {
-    if (!isLoading && isAuthenticated) navigate('/dashboard', { replace: true });
-  }, [isAuthenticated, isLoading, navigate]);
+    if (!isLoading && isAuthenticated) navigate(from === '/login' ? '/dashboard' : from, { replace: true });
+  }, [from, isAuthenticated, isLoading, navigate]);
 
   const submitLogin = loginForm.handleSubmit(async (values) => {
     try {
