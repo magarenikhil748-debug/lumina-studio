@@ -8,6 +8,8 @@ import { createDevUser, findDevUserByEmail, findDevUserByGoogleId, findDevUserBy
 const { Strategy: GoogleStrategy } = passportGoogle;
 const { Strategy: JwtStrategy, ExtractJwt } = passportJwt;
 
+const cleanEnv = (value, fallback = '') => String(value || fallback).trim();
+
 passport.use(new JwtStrategy({
   jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
   secretOrKey: getJwtSecret('JWT_ACCESS_SECRET')
@@ -24,9 +26,9 @@ passport.use(new JwtStrategy({
 }));
 
 passport.use(new GoogleStrategy({
-  clientID: process.env.GOOGLE_CLIENT_ID || 'missing-google-client-id',
-  clientSecret: process.env.GOOGLE_CLIENT_SECRET || 'missing-google-client-secret',
-  callbackURL: process.env.GOOGLE_CALLBACK_URL || 'http://localhost:5000/api/auth/google/callback',
+  clientID: cleanEnv(process.env.GOOGLE_CLIENT_ID, 'missing-google-client-id'),
+  clientSecret: cleanEnv(process.env.GOOGLE_CLIENT_SECRET, 'missing-google-client-secret'),
+  callbackURL: cleanEnv(process.env.GOOGLE_CALLBACK_URL, 'http://localhost:5000/api/auth/google/callback'),
   scope: ['profile', 'email']
 }, async (accessToken, refreshToken, profile, done) => {
   try {
