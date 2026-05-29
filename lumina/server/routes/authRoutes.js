@@ -18,6 +18,28 @@ const clientUrl = () => {
   }
 };
 
+const oauthFailureUrl = (reason = 'oauth_failed') => {
+  const redirectUrl = new URL(`${clientUrl()}/login`);
+  redirectUrl.searchParams.set('error', 'oauth_failed');
+  redirectUrl.searchParams.set('reason', reason);
+  return redirectUrl.toString();
+};
+
+const classifyGoogleError = (error) => {
+  const raw = [
+    error?.name,
+    error?.message,
+    error?.oauthError?.data,
+    error?.oauthError?.statusCode
+  ].filter(Boolean).join(' ').toLowerCase();
+
+  if (raw.includes('redirect_uri_mismatch')) return 'redirect_uri_mismatch';
+  if (raw.includes('invalid_client') || raw.includes('unauthorized_client')) return 'google_client_config';
+  if (raw.includes('invalid_grant')) return 'stale_google_code';
+  if (raw.includes('access_denied')) return 'access_denied';
+  return 'google_exchange_failed';
+};
+
 router.post('/register', authLimiter, registerValidators, validateRequest, register);
 router.post('/login', authLimiter, loginValidators, validateRequest, login);
 router.post('/logout', requireAuth, logout);
@@ -27,19 +49,21 @@ router.get('/google', passport.authenticate('google', { session: false, scope: [
 router.get('/google/callback', (req, res, next) => {
   passport.authenticate('google', { session: false }, (error, user, info) => {
     if (error) {
+      const reason = classifyGoogleError(error);
       logger.error('Google OAuth callback failed', {
         errorName: error.name,
         errorMessage: error.message,
         oauthError: error.oauthError?.data,
+        reason,
         info
       });
-      res.redirect(`${clientUrl()}/login?error=oauth_failed`);
+      res.redirect(oauthFailureUrl(reason));
       return;
     }
 
     if (!user) {
       logger.warn('Google OAuth callback returned no user', { info });
-      res.redirect(`${clientUrl()}/login?error=oauth_failed`);
+      res.redirect(oauthFailureUrl('no_google_user'));
       return;
     }
 

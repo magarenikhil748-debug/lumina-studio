@@ -39,6 +39,15 @@ const strengthLevels = [
   { label: 'Strong', color: 'bg-[#a855f7]', score: 4 }
 ];
 
+const googleErrorMessages = {
+  google_client_config: 'Google sign in needs a production OAuth config update. Email sign in still works.',
+  redirect_uri_mismatch: 'Google rejected the callback URL. Check the authorized redirect URI in Google Cloud.',
+  stale_google_code: 'That Google sign in link expired. Please try again.',
+  access_denied: 'Google sign in was cancelled.',
+  no_google_user: 'Google did not return a usable account. Please try another Google account.',
+  google_exchange_failed: 'Google could not complete sign in. Please try again or use email sign in.'
+};
+
 const GoogleIcon = () => (
   <svg aria-hidden="true" className="h-5 w-5" viewBox="0 0 24 24">
     <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
@@ -106,7 +115,8 @@ const LoginPage = () => {
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const error = params.get('error');
-    if (error === 'oauth_failed') toast.error('Google sign in failed. Please try again.');
+    const reason = params.get('reason');
+    if (error === 'oauth_failed') toast.error(googleErrorMessages[reason] || 'Google sign in failed. Please try again.');
     if (error === 'session_failed') toast.error('Your Google sign in completed, but the session could not be restored.');
   }, [location.search]);
 
