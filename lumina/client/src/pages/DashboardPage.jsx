@@ -11,6 +11,7 @@ import ShareModal from '../components/ShareModal';
 import TierBadge from '../components/TierBadge';
 import UsageMeter from '../components/UsageMeter';
 import BillingDashboard from '../components/billing/BillingDashboard';
+import LoadingScreen from '../components/LoadingScreen';
 import { useAuth } from '../context/AuthContext';
 import { portfolioAPI } from '../utils/api';
 import { formatPublicUrl, getPublicBaseUrl } from '../utils/publicUrl';
@@ -138,7 +139,7 @@ PortfolioCard.propTypes = {
 
 const DashboardPage = () => {
   const reduceMotion = useReducedMotion();
-  const { user } = useAuth();
+  const { user, isAuthenticated, isLoading: isAuthLoading } = useAuth();
   const [portfolios, setPortfolios] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [copiedId, setCopiedId] = useState('');
@@ -152,6 +153,7 @@ const DashboardPage = () => {
   }), [portfolios]);
 
   useEffect(() => {
+    if (isAuthLoading || !isAuthenticated) return undefined;
     let active = true;
     const load = async () => {
       setIsLoading(true);
@@ -168,7 +170,7 @@ const DashboardPage = () => {
     return () => {
       active = false;
     };
-  }, []);
+  }, [isAuthenticated, isAuthLoading]);
 
   const copyPublicUrl = async (portfolio) => {
     const id = portfolio.id || portfolio._id;
@@ -211,6 +213,11 @@ const DashboardPage = () => {
     <main className="min-h-screen bg-[#0a0a0f] px-4 py-28 text-white">
       <AnimatedBackground />
       <Navbar compact />
+      {isAuthLoading ? (
+        <div className="mx-auto max-w-3xl">
+          <LoadingScreen message="Opening your dashboard" detail="Checking your secure Lumina session." />
+        </div>
+      ) : null}
       <motion.div
         initial={reduceMotion ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}

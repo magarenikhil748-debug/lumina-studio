@@ -13,6 +13,7 @@ const PreviewPage = lazy(() => import('./pages/PreviewPage'));
 const PublicPortfolioPage = lazy(() => import('./pages/PublicPortfolioPage'));
 const DashboardPage = lazy(() => import('./pages/DashboardPage'));
 const LoginPage = lazy(() => import('./pages/LoginPage'));
+const OAuthCallbackPage = lazy(() => import('./pages/OAuthCallbackPage'));
 const PricingPage = lazy(() => import('./pages/PricingPage'));
 const BillingPage = lazy(() => import('./pages/BillingPage'));
 const BillingSuccessPage = lazy(() => import('./pages/BillingSuccessPage'));
@@ -34,6 +35,7 @@ const AnimatedRoutes = () => {
           <Routes location={location}>
             <Route path="/" element={<LandingPage />} />
             <Route path="/login" element={<LoginPage />} />
+            <Route path="/auth/callback" element={<OAuthCallbackPage />} />
             <Route path="/build" element={<BuildPage />} />
             <Route path="/preview" element={<PreviewPage />} />
             <Route path="/pricing" element={<PricingPage />} />

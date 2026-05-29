@@ -1,7 +1,7 @@
 import PropTypes from 'prop-types';
-import { createContext, useContext, useEffect, useMemo, useReducer, useRef } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useReducer, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { API_URL, authAPI } from '../utils/api';
+import { authAPI } from '../utils/api';
 
 const AuthContext = createContext(null);
 
@@ -32,39 +32,57 @@ export const AuthProvider = ({ children }) => {
   const authActionVersion = useRef(0);
   const navigate = useNavigate();
 
+  const checkSession = useCallback(async ({ skipLoading = false } = {}) => {
+    const requestVersion = authActionVersion.current;
+    if (!skipLoading) dispatch({ type: 'SET_LOADING', payload: true });
+    try {
+      const response = await authAPI.getMe({ skipAuthRedirect: true });
+      if (requestVersion === authActionVersion.current) {
+        dispatch({ type: 'SET_USER', payload: response.user });
+        return response.user;
+      }
+      return null;
+    } catch (error) {
+      if (requestVersion === authActionVersion.current) {
+        dispatch({ type: 'CLEAR_USER' });
+      }
+      return null;
+    } finally {
+      if (requestVersion === authActionVersion.current) {
+        dispatch({ type: 'SET_LOADING', payload: false });
+      }
+    }
+  }, []);
+
   useEffect(() => {
     const clearUser = () => {
       authActionVersion.current += 1;
       dispatch({ type: 'CLEAR_USER' });
     };
     window.addEventListener('lumina-auth-clear', clearUser);
-    return () => window.removeEventListener('lumina-auth-clear', clearUser);
+    window.addEventListener('auth:logout', clearUser);
+    return () => {
+      window.removeEventListener('lumina-auth-clear', clearUser);
+      window.removeEventListener('auth:logout', clearUser);
+    };
   }, []);
 
   useEffect(() => {
     let active = true;
-    const checkSession = async () => {
-      const requestVersion = authActionVersion.current;
-      dispatch({ type: 'SET_LOADING', payload: true });
-      try {
-        const response = await authAPI.getMe({ skipAuthRedirect: true });
-        if (active && requestVersion === authActionVersion.current) dispatch({ type: 'SET_USER', payload: response.user });
-      } catch (error) {
-        if (active && requestVersion === authActionVersion.current) dispatch({ type: 'CLEAR_USER' });
-      } finally {
-        if (active && requestVersion === authActionVersion.current) dispatch({ type: 'SET_LOADING', payload: false });
-      }
+    const runCheck = async () => {
+      if (active) await checkSession();
     };
-    checkSession();
+    runCheck();
     return () => {
       active = false;
     };
-  }, []);
+  }, [checkSession]);
 
   const value = useMemo(() => ({
     ...state,
     login: async (email, password) => {
       try {
+        dispatch({ type: 'SET_LOADING', payload: true });
         const response = await authAPI.login({ email, password });
         authActionVersion.current += 1;
         dispatch({ type: 'SET_USER', payload: response.user });
@@ -77,6 +95,7 @@ export const AuthProvider = ({ children }) => {
     },
     register: async (name, email, password) => {
       try {
+        dispatch({ type: 'SET_LOADING', payload: true });
         const response = await authAPI.register({ name, email, password });
         authActionVersion.current += 1;
         dispatch({ type: 'SET_USER', payload: response.user });
@@ -101,9 +120,13 @@ export const AuthProvider = ({ children }) => {
       }
     },
     loginWithGoogle: () => {
-      window.location.assign(`${API_URL}/auth/google`);
-    }
-  }), [navigate, state]);
+      if (window.location.pathname !== '/login') {
+        sessionStorage.setItem('oauth_redirect', `${window.location.pathname}${window.location.search}`);
+      }
+      authAPI.googleLogin();
+    },
+    checkSession
+  }), [checkSession, navigate, state]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };

@@ -1,7 +1,8 @@
 import { motion, useReducedMotion } from 'framer-motion';
 import { Sparkles } from 'lucide-react';
+import PropTypes from 'prop-types';
 
-const LoadingScreen = () => {
+const LoadingScreen = ({ message = 'Designing your portfolio direction', detail = 'Gemini is polishing your bio, projects, layout, and color system.' }) => {
   const reduceMotion = useReducedMotion();
 
   return (
@@ -22,8 +23,8 @@ const LoadingScreen = () => {
             <Sparkles className="h-9 w-9 text-neon" aria-hidden="true" />
           </motion.div>
         </div>
-        <h2 className="font-display text-2xl font-bold text-white">Designing your portfolio direction</h2>
-        <p className="mt-3 text-white/50">Gemini is polishing your bio, projects, layout, and color system.</p>
+        <h2 className="font-display text-2xl font-bold text-white">{message}</h2>
+        <p className="mt-3 text-white/50">{detail}</p>
         <div className="mt-8 space-y-3">
           {[0, 1, 2].map((item) => (
             <div key={item} className="relative h-3 overflow-hidden rounded-full bg-white/[0.05]">
@@ -38,6 +39,11 @@ const LoadingScreen = () => {
       </div>
     </div>
   );
+};
+
+LoadingScreen.propTypes = {
+  detail: PropTypes.string,
+  message: PropTypes.string
 };
 
 export default LoadingScreen;

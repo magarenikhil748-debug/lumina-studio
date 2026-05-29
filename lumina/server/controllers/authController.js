@@ -131,8 +131,12 @@ export const getMe = async (req, res, next) => {
 
 export const googleCallback = async (req, res, next) => {
   try {
+    if (!req.user) {
+      res.redirect(`${clientUrl()}/login?error=oauth_failed`);
+      return;
+    }
     issueSession(res, req.user);
-    res.redirect(`${clientUrl()}/dashboard`);
+    res.redirect(`${clientUrl()}/auth/callback?success=true`);
   } catch (error) {
     next(error);
   }

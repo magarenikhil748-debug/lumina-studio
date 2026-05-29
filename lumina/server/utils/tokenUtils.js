@@ -13,12 +13,12 @@ export const getJwtSecret = (key) => {
 };
 
 const cookieBase = () => {
-  const sameSite = String(process.env.COOKIE_SAME_SITE || (process.env.NODE_ENV === 'production' ? 'none' : 'lax')).toLowerCase();
-  const secure = sameSite === 'none' || (process.env.COOKIE_SECURE
-    ? process.env.COOKIE_SECURE === 'true'
-    : process.env.NODE_ENV === 'production');
+  const isProduction = process.env.NODE_ENV === 'production';
+  const sameSite = isProduction ? 'none' : String(process.env.COOKIE_SAME_SITE || 'lax').toLowerCase();
+  const secure = isProduction || sameSite === 'none' || process.env.COOKIE_SECURE === 'true';
   const options = {
     httpOnly: true,
+    path: '/',
     secure,
     sameSite
   };

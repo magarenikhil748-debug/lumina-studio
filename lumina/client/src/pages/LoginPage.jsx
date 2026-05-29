@@ -103,6 +103,13 @@ const LoginPage = () => {
     if (!isLoading && isAuthenticated) navigate(from === '/login' ? '/dashboard' : from, { replace: true });
   }, [from, isAuthenticated, isLoading, navigate]);
 
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const error = params.get('error');
+    if (error === 'oauth_failed') toast.error('Google sign in failed. Please try again.');
+    if (error === 'session_failed') toast.error('Your Google sign in completed, but the session could not be restored.');
+  }, [location.search]);
+
   const submitLogin = loginForm.handleSubmit(async (values) => {
     try {
       await login(values.email, values.password);
@@ -116,7 +123,7 @@ const LoginPage = () => {
   const submitRegister = registerForm.handleSubmit(async (values) => {
     try {
       await registerUser(values.name, values.email, values.password);
-      toast.success('Welcome to Lumina! 🎉');
+      toast.success('Welcome to Lumina.');
       navigate('/dashboard', { replace: true });
     } catch (error) {
       toast.error(error.message);

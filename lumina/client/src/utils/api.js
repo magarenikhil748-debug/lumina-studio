@@ -1,16 +1,23 @@
 import axios from 'axios';
 
-const runtimeApiUrl = `${window.location.protocol}//${window.location.hostname}:5000/api`;
-export const API_URL = import.meta.env.VITE_API_URL || runtimeApiUrl;
+const normalizeUrl = (value) => String(value || '').trim().replace(/\/+$/, '');
+const productionApiUrl = 'https://talented-wonder-production-bf61.up.railway.app/api';
+const localApiUrl = `${window.location.protocol}//${window.location.hostname}:5000/api`;
+const runtimeApiUrl = window.location.hostname.endsWith('vercel.app') ? productionApiUrl : localApiUrl;
+export const API_URL = normalizeUrl(import.meta.env.VITE_API_URL || runtimeApiUrl);
 
 const api = axios.create({
   baseURL: API_URL,
   timeout: 30000,
   withCredentials: true,
-  headers: { 'Content-Type': 'application/json' }
+  headers: {
+    Accept: 'application/json',
+    'Content-Type': 'application/json'
+  }
 });
 
 let refreshPromise = null;
+const skipRetryRoutes = ['/auth/login', '/auth/register', '/auth/refresh', '/auth/google'];
 
 api.interceptors.response.use(
   (response) => response,
@@ -20,8 +27,9 @@ api.interceptors.response.use(
     const url = originalRequest?.url || '';
     const skipRedirect = originalRequest?.skipAuthRedirect;
     const skipRefresh = originalRequest?.skipRefresh;
+    const isSkipRoute = skipRetryRoutes.some((route) => url.includes(route));
 
-    if (!originalRequest || status !== 401 || originalRequest._retry || skipRefresh || url.includes('/auth/refresh') || url.includes('/auth/login')) {
+    if (!originalRequest || status !== 401 || originalRequest._retry || skipRefresh || isSkipRoute) {
       return Promise.reject(error);
     }
 
@@ -34,6 +42,7 @@ api.interceptors.response.use(
     } catch (refreshError) {
       refreshPromise = null;
       window.dispatchEvent(new Event('lumina-auth-clear'));
+      window.dispatchEvent(new Event('auth:logout'));
       if (!skipRedirect && window.location.pathname !== '/login') {
         window.location.assign('/login');
       }
@@ -58,6 +67,9 @@ export const authAPI = {
   getMe: async (options = {}) => {
     const { data } = await api.get('/auth/me', options);
     return data;
+  },
+  googleLogin: () => {
+    window.location.assign(`${API_URL}/auth/google`);
   }
 };
 
