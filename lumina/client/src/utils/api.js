@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { tokenStorage } from './tokenStorage';
 
 const normalizeUrl = (value) => String(value || '').trim().replace(/\/+$/, '');
 const productionApiUrl = 'https://talented-wonder-production-bf61.up.railway.app/api';
@@ -6,15 +7,27 @@ const localApiUrl = `${window.location.protocol}//${window.location.hostname}:50
 const runtimeApiUrl = window.location.hostname.endsWith('vercel.app') ? productionApiUrl : localApiUrl;
 export const API_URL = normalizeUrl(import.meta.env.VITE_API_URL || runtimeApiUrl);
 
+const unwrapData = (payload) => payload?.data ?? payload;
+
 const api = axios.create({
   baseURL: API_URL,
   timeout: 30000,
-  withCredentials: true,
   headers: {
     Accept: 'application/json',
     'Content-Type': 'application/json'
   }
 });
+
+api.interceptors.request.use(
+  (config) => {
+    const token = tokenStorage.getAccessToken();
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
 
 let refreshPromise = null;
 const skipRetryRoutes = ['/auth/login', '/auth/register', '/auth/refresh', '/auth/google'];
@@ -34,13 +47,31 @@ api.interceptors.response.use(
     }
 
     originalRequest._retry = true;
+
     try {
-      refreshPromise = refreshPromise || api.post('/auth/refresh', {}, { skipAuthRedirect: true });
-      await refreshPromise;
+      const refreshToken = tokenStorage.getRefreshToken();
+      if (!refreshToken) throw new Error('No refresh token available');
+
+      refreshPromise = refreshPromise || axios.post(
+        `${API_URL}/auth/refresh`,
+        { refreshToken },
+        {
+          timeout: 30000,
+          headers: {
+            Accept: 'application/json',
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+
+      const { data } = await refreshPromise;
       refreshPromise = null;
+      tokenStorage.setTokens(data.accessToken, data.refreshToken);
+      originalRequest.headers.Authorization = `Bearer ${data.accessToken}`;
       return api(originalRequest);
     } catch (refreshError) {
       refreshPromise = null;
+      tokenStorage.clearTokens();
       window.dispatchEvent(new Event('lumina-auth-clear'));
       window.dispatchEvent(new Event('auth:logout'));
       if (!skipRedirect && window.location.pathname !== '/login') {
@@ -64,6 +95,10 @@ export const authAPI = {
     const { data } = await api.post('/auth/logout', {}, { skipAuthRedirect: true });
     return data;
   },
+  refresh: async (refreshToken) => {
+    const { data } = await api.post('/auth/refresh', { refreshToken }, { skipAuthRedirect: true });
+    return data;
+  },
   getMe: async (options = {}) => {
     const { data } = await api.get('/auth/me', options);
     return data;
@@ -76,19 +111,19 @@ export const authAPI = {
 export const portfolioAPI = {
   getAll: async () => {
     const { data } = await api.get('/portfolios');
-    return data.data;
+    return unwrapData(data);
   },
   getById: async (id) => {
     const { data } = await api.get(`/portfolios/${id}`);
-    return data.data;
+    return unwrapData(data);
   },
   create: async (portfolio) => {
     const { data } = await api.post('/portfolios', portfolio);
-    return data.data;
+    return unwrapData(data);
   },
   update: async (id, portfolio) => {
     const { data } = await api.put(`/portfolios/${id}`, portfolio);
-    return data.data;
+    return unwrapData(data);
   },
   delete: async (id) => {
     const { data } = await api.delete(`/portfolios/${id}`);
@@ -96,11 +131,11 @@ export const portfolioAPI = {
   },
   getPublic: async (slug) => {
     const { data } = await api.get(`/portfolios/public/${slug}`, { skipAuthRedirect: true });
-    return data.data;
+    return unwrapData(data);
   },
   getAnalytics: async (id, days = 30) => {
     const { data } = await api.get(`/portfolios/${id}/analytics`, { params: { days } });
-    return data.data;
+    return unwrapData(data);
   },
   toggleVisibility: async (id) => {
     const { data } = await api.put(`/portfolios/${id}/visibility`);
@@ -108,21 +143,21 @@ export const portfolioAPI = {
   },
   trackExport: async (slug) => {
     const { data } = await api.post(`/portfolios/public/${slug}/export`, {}, { skipAuthRedirect: true });
-    return data.data;
+    return unwrapData(data);
   }
 };
 
 export const geminiAPI = {
   generate: async (payload) => {
     const { data } = await api.post('/gemini/generate', payload);
-    return data.data;
+    return unwrapData(data);
   }
 };
 
 export const billingAPI = {
   plans: async () => {
     const { data } = await api.get('/billing/plans', { skipAuthRedirect: true });
-    return data.data;
+    return unwrapData(data);
   },
   getPrices: async () => {
     const { data } = await api.get('/billing/prices', { skipAuthRedirect: true });
@@ -130,7 +165,7 @@ export const billingAPI = {
   },
   getStatus: async () => {
     const { data } = await api.get('/billing/status');
-    return data.data;
+    return unwrapData(data);
   },
   checkout: async (payload) => {
     const { data } = await api.post('/billing/checkout', payload);
@@ -151,14 +186,14 @@ export const billingAPI = {
   },
   history: async () => {
     const { data } = await api.get('/billing/history');
-    return data.data;
+    return unwrapData(data);
   }
 };
 
 export const userAPI = {
   getPlan: async () => {
     const { data } = await api.get('/user/plan', { skipAuthRedirect: true });
-    return data.data;
+    return unwrapData(data);
   }
 };
 
@@ -211,7 +246,7 @@ export const trackPortfolioExport = (slug) => portfolioAPI.trackExport(slug);
  */
 export const joinWaitlist = async (payload) => {
   const { data } = await api.post('/waitlist', payload);
-  return data.data;
+  return unwrapData(data);
 };
 
 export default api;

@@ -2,6 +2,7 @@ import PropTypes from 'prop-types';
 import { createContext, useCallback, useContext, useEffect, useMemo, useReducer, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { authAPI } from '../utils/api';
+import { tokenStorage } from '../utils/tokenStorage';
 
 const AuthContext = createContext(null);
 
@@ -33,8 +34,14 @@ export const AuthProvider = ({ children }) => {
   const navigate = useNavigate();
 
   const checkSession = useCallback(async ({ skipLoading = false } = {}) => {
+    if (!tokenStorage.hasTokens()) {
+      dispatch({ type: 'CLEAR_USER' });
+      return null;
+    }
+
     const requestVersion = authActionVersion.current;
     if (!skipLoading) dispatch({ type: 'SET_LOADING', payload: true });
+
     try {
       const response = await authAPI.getMe({ skipAuthRedirect: true });
       if (requestVersion === authActionVersion.current) {
@@ -44,6 +51,7 @@ export const AuthProvider = ({ children }) => {
       return null;
     } catch (error) {
       if (requestVersion === authActionVersion.current) {
+        tokenStorage.clearTokens();
         dispatch({ type: 'CLEAR_USER' });
       }
       return null;
@@ -54,22 +62,31 @@ export const AuthProvider = ({ children }) => {
     }
   }, []);
 
+  const handleForcedLogout = useCallback(() => {
+    authActionVersion.current += 1;
+    tokenStorage.clearTokens();
+    dispatch({ type: 'CLEAR_USER' });
+    if (window.location.pathname !== '/login') {
+      navigate('/login', { replace: true });
+    }
+  }, [navigate]);
+
   useEffect(() => {
-    const clearUser = () => {
-      authActionVersion.current += 1;
-      dispatch({ type: 'CLEAR_USER' });
-    };
-    window.addEventListener('lumina-auth-clear', clearUser);
-    window.addEventListener('auth:logout', clearUser);
+    window.addEventListener('lumina-auth-clear', handleForcedLogout);
+    window.addEventListener('auth:logout', handleForcedLogout);
     return () => {
-      window.removeEventListener('lumina-auth-clear', clearUser);
-      window.removeEventListener('auth:logout', clearUser);
+      window.removeEventListener('lumina-auth-clear', handleForcedLogout);
+      window.removeEventListener('auth:logout', handleForcedLogout);
     };
-  }, []);
+  }, [handleForcedLogout]);
 
   useEffect(() => {
     let active = true;
     const runCheck = async () => {
+      if (!tokenStorage.hasTokens()) {
+        if (active) dispatch({ type: 'CLEAR_USER' });
+        return;
+      }
       if (active) await checkSession();
     };
     runCheck();
@@ -78,55 +95,66 @@ export const AuthProvider = ({ children }) => {
     };
   }, [checkSession]);
 
+  const login = useCallback(async (email, password) => {
+    try {
+      authActionVersion.current += 1;
+      dispatch({ type: 'SET_LOADING', payload: true });
+      const response = await authAPI.login({ email, password });
+      tokenStorage.setTokens(response.accessToken, response.refreshToken);
+      dispatch({ type: 'SET_USER', payload: response.user });
+      return response.user;
+    } catch (error) {
+      const message = error.response?.data?.message || error.response?.data?.error || 'Could not sign in';
+      dispatch({ type: 'SET_ERROR', payload: message });
+      throw new Error(message);
+    }
+  }, []);
+
+  const register = useCallback(async (name, email, password) => {
+    try {
+      authActionVersion.current += 1;
+      dispatch({ type: 'SET_LOADING', payload: true });
+      const response = await authAPI.register({ name, email, password });
+      tokenStorage.setTokens(response.accessToken, response.refreshToken);
+      dispatch({ type: 'SET_USER', payload: response.user });
+      return response.user;
+    } catch (error) {
+      const message = error.response?.data?.message || error.response?.data?.error || 'Could not create account';
+      dispatch({ type: 'SET_ERROR', payload: message });
+      throw new Error(message);
+    }
+  }, []);
+
+  const logout = useCallback(async () => {
+    authActionVersion.current += 1;
+    sessionStorage.setItem('lumina-logging-out', '1');
+    try {
+      await authAPI.logout();
+    } catch (error) {
+      dispatch({ type: 'SET_ERROR', payload: null });
+    } finally {
+      tokenStorage.clearTokens();
+      dispatch({ type: 'CLEAR_USER' });
+      navigate('/', { replace: true });
+      window.setTimeout(() => sessionStorage.removeItem('lumina-logging-out'), 900);
+    }
+  }, [navigate]);
+
+  const loginWithGoogle = useCallback(() => {
+    if (window.location.pathname !== '/login') {
+      sessionStorage.setItem('oauth_redirect', `${window.location.pathname}${window.location.search}`);
+    }
+    authAPI.googleLogin();
+  }, []);
+
   const value = useMemo(() => ({
     ...state,
-    login: async (email, password) => {
-      try {
-        dispatch({ type: 'SET_LOADING', payload: true });
-        const response = await authAPI.login({ email, password });
-        authActionVersion.current += 1;
-        dispatch({ type: 'SET_USER', payload: response.user });
-        return response.user;
-      } catch (error) {
-        const message = error.response?.data?.message || error.response?.data?.error || 'Could not sign in';
-        dispatch({ type: 'SET_ERROR', payload: message });
-        throw new Error(message);
-      }
-    },
-    register: async (name, email, password) => {
-      try {
-        dispatch({ type: 'SET_LOADING', payload: true });
-        const response = await authAPI.register({ name, email, password });
-        authActionVersion.current += 1;
-        dispatch({ type: 'SET_USER', payload: response.user });
-        return response.user;
-      } catch (error) {
-        const message = error.response?.data?.message || error.response?.data?.error || 'Could not create account';
-        dispatch({ type: 'SET_ERROR', payload: message });
-        throw new Error(message);
-      }
-    },
-    logout: async () => {
-      authActionVersion.current += 1;
-      sessionStorage.setItem('lumina-logging-out', '1');
-      try {
-        await authAPI.logout();
-      } catch (error) {
-        dispatch({ type: 'SET_ERROR', payload: null });
-      } finally {
-        navigate('/', { replace: true });
-        window.setTimeout(() => dispatch({ type: 'CLEAR_USER' }), 0);
-        window.setTimeout(() => sessionStorage.removeItem('lumina-logging-out'), 900);
-      }
-    },
-    loginWithGoogle: () => {
-      if (window.location.pathname !== '/login') {
-        sessionStorage.setItem('oauth_redirect', `${window.location.pathname}${window.location.search}`);
-      }
-      authAPI.googleLogin();
-    },
+    login,
+    register,
+    logout,
+    loginWithGoogle,
     checkSession
-  }), [checkSession, navigate, state]);
+  }), [checkSession, login, loginWithGoogle, logout, register, state]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };

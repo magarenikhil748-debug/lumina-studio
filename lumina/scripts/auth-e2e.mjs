@@ -271,12 +271,15 @@ try {
     await sleep(250);
     await evaluate(cdp, clickButton, 'Logout', 'last');
     const state = await waitFor(() => evaluate(cdp, pageState).then((current) => current.url === `${FRONTEND_URL}/` ? current : null), 'logout home redirect');
+    const hasStoredTokens = await evaluate(cdp, () => Boolean(
+      localStorage.getItem('lumina_access_token') || localStorage.getItem('lumina_refresh_token')
+    ));
     const authStatus = await evaluate(cdp, async (backendUrl) => {
-      const response = await fetch(`${backendUrl}/api/auth/me`, { credentials: 'include' });
+      const response = await fetch(`${backendUrl}/api/auth/me`);
       return response.status;
     }, BACKEND_URL);
-    return { ...state, authStatus };
-  }, 'Redirects to home, cookie cleared', (state) => state.url === `${FRONTEND_URL}/` && state.authStatus === 401);
+    return { ...state, authStatus, hasStoredTokens };
+  }, 'Redirects to home, local tokens cleared', (state) => state.url === `${FRONTEND_URL}/` && state.authStatus === 401 && !state.hasStoredTokens);
 
   await record('Google OAuth', async () => {
     await clearBrowserState(cdp);

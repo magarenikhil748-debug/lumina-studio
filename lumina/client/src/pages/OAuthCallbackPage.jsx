@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import LoadingScreen from '../components/LoadingScreen';
 import { useAuth } from '../context/AuthContext';
+import { tokenStorage } from '../utils/tokenStorage';
 
 const OAuthCallbackPage = () => {
   const navigate = useNavigate();
@@ -9,24 +10,36 @@ const OAuthCallbackPage = () => {
 
   useEffect(() => {
     let active = true;
+
     const completeOAuth = async () => {
       const params = new URLSearchParams(window.location.search);
-      if (params.get('error') || params.get('success') !== 'true') {
+      const accessToken = params.get('accessToken');
+      const refreshToken = params.get('refreshToken');
+
+      if (params.get('error') || !accessToken || !refreshToken) {
         navigate('/login?error=oauth_failed', { replace: true });
         return;
       }
 
-      const user = await checkSession();
-      if (!active) return;
-      if (!user) {
-        navigate('/login?error=session_failed', { replace: true });
-        return;
-      }
+      try {
+        tokenStorage.setTokens(accessToken, refreshToken);
+        window.history.replaceState({}, document.title, '/auth/callback');
 
-      window.history.replaceState({}, document.title, '/auth/callback');
-      const redirectTo = sessionStorage.getItem('oauth_redirect') || '/dashboard';
-      sessionStorage.removeItem('oauth_redirect');
-      navigate(redirectTo, { replace: true });
+        const user = await checkSession();
+        if (!active) return;
+        if (!user) {
+          tokenStorage.clearTokens();
+          navigate('/login?error=session_failed', { replace: true });
+          return;
+        }
+
+        const redirectTo = sessionStorage.getItem('oauth_redirect') || '/dashboard';
+        sessionStorage.removeItem('oauth_redirect');
+        navigate(redirectTo, { replace: true });
+      } catch (error) {
+        tokenStorage.clearTokens();
+        if (active) navigate('/login?error=session_failed', { replace: true });
+      }
     };
 
     completeOAuth();

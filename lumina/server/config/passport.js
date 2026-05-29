@@ -8,13 +8,8 @@ import { createDevUser, findDevUserByEmail, findDevUserByGoogleId, findDevUserBy
 const { Strategy: GoogleStrategy } = passportGoogle;
 const { Strategy: JwtStrategy, ExtractJwt } = passportJwt;
 
-const tokenExtractor = (req) => {
-  if (req?.cookies?.accessToken) return req.cookies.accessToken;
-  return ExtractJwt.fromAuthHeaderAsBearerToken()(req);
-};
-
 passport.use(new JwtStrategy({
-  jwtFromRequest: tokenExtractor,
+  jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
   secretOrKey: getJwtSecret('JWT_ACCESS_SECRET')
 }, async (payload, done) => {
   try {

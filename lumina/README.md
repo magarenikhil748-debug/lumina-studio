@@ -11,7 +11,7 @@ Tagline: **AI portfolios that get you noticed.**
 - Server-side Gemini `gemini-1.5-flash` generation with strict JSON prompting, JSON repair, validation, request timeout, graceful fallback content, and generation metadata.
 - Preview studio with Minimal, Bold, Creative, Editorial, and Premium layouts, device preview, palette switcher, one-click regenerate controls, watermark logic, upgrade CTA, copy HTML, download HTML, and copy JSON.
 - Public share route `/p/:slug` with dynamic document title, description, OpenGraph tags, and view tracking.
-- Cookie-based authentication with email/password, Google OAuth structure, protected dashboard, user-owned portfolios, monthly free-generation limits, and Pro bypass rules.
+- Authorization-header authentication with email/password, Google OAuth, protected dashboard, user-owned portfolios, monthly free-generation limits, and Pro bypass rules.
 - SaaS dashboard architecture for owned portfolios, view/export counters, quality metrics, and Stripe subscription state.
 - Express API with Helmet, CORS allowlist, rate limiting, input sanitization, URL/email validation, body-size limits, centralized error handling, and production-safe logging.
 - MongoDB Atlas-ready schema with an in-memory local development fallback when `MONGODB_URI` is not configured.
@@ -73,9 +73,6 @@ STRIPE_STUDIO_ANNUAL_PRICE_ID=price_your_studio_annual_price
 REDIS_URL=
 NODE_ENV=development
 CLIENT_URL=http://localhost:5173,http://127.0.0.1:5173
-COOKIE_SECURE=false
-COOKIE_SAME_SITE=lax
-COOKIE_DOMAIN=
 JWT_ACCESS_SECRET=generate_a_64_char_random_string_here
 JWT_REFRESH_SECRET=generate_a_different_64_char_random_string_here
 GOOGLE_CLIENT_ID=your_google_oauth_client_id
@@ -152,7 +149,7 @@ Do not commit real credentials. MongoDB URLs and Gemini API keys are private acc
 
 - Root directory: `lumina/server`
 - Start command: `node server.js`
-- Add `MONGODB_URI`, `GEMINI_API_KEY`, `NODE_ENV=production`, `CLIENT_URL`, `COOKIE_SAME_SITE=none`, `COOKIE_SECURE=true`, JWT secrets, Google OAuth secrets, Stripe keys, Stripe price IDs, and `REDIS_URL` for BullMQ grace-period jobs.
+- Add `MONGODB_URI`, `GEMINI_API_KEY`, `NODE_ENV=production`, `CLIENT_URL`, JWT secrets, Google OAuth secrets, Stripe keys, Stripe price IDs, and `REDIS_URL` for BullMQ grace-period jobs.
 - Set `CLIENT_URL` to your Vercel URL. Multiple origins can be comma-separated.
 - `server/railway.toml` and `server/railway.json` include the start command, health check, and restart policy.
 
@@ -164,7 +161,7 @@ Set `CLIENT_URL` to exact allowed origins:
 CLIENT_URL=https://lumina-studio.vercel.app,https://www.yourdomain.com
 ```
 
-Avoid `*` in production because the API uses credential-ready CORS behavior.
+Avoid `*` in production. Browser clients authenticate with `Authorization: Bearer <token>` headers, so the backend must allow the exact frontend origin.
 
 ## Stripe Billing Setup
 
@@ -180,7 +177,7 @@ Avoid `*` in production because the API uses credential-ready CORS behavior.
 
 - Frontend cannot reach backend: confirm `VITE_API_URL` points to the backend `/api` base URL.
 - CORS error: add the frontend origin to `CLIENT_URL` on the backend. Trailing slashes are normalized, but the domain must still match.
-- Login cookie does not persist on Vercel/Railway: set `COOKIE_SAME_SITE=none` and `COOKIE_SECURE=true` on Railway, then redeploy.
+- Login redirects back to `/login`: clear old browser storage, confirm Vercel has `VITE_API_URL` set to the Railway `/api` URL, and confirm Railway has `CLIENT_URL` set to the exact Vercel origin.
 - Google OAuth returns an error: confirm the Google OAuth redirect URI exactly matches `GOOGLE_CALLBACK_URL`.
 - Pricing page is not visible after deploy: confirm Vercel redeployed the latest commit and visit `/pricing`.
 - Gemini returns fallback content: confirm `GEMINI_API_KEY` exists on the server and the key is enabled.

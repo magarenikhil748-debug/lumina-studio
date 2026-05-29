@@ -1,6 +1,13 @@
 import User from '../models/User.js';
 import { compareDevPassword, createDevUser, findDevUserByEmail, findDevUserById, toPublicUser, usingDb } from '../utils/devStore.js';
-import { clearTokenCookies, generateAccessToken, generateRefreshToken, setTokenCookies, verifyRefreshToken } from '../utils/tokenUtils.js';
+import {
+  clearTokenCookies,
+  generateAccessToken,
+  generateRefreshToken,
+  sendTokenResponse,
+  setTokenCookies,
+  verifyRefreshToken
+} from '../utils/tokenUtils.js';
 import { isStrongPassword, isValidEmail, isValidName, strip } from '../utils/validation.js';
 
 const nextMonthStart = () => {
@@ -25,6 +32,7 @@ const issueSession = (res, user) => {
   const accessToken = generateAccessToken(id, tier);
   const refreshToken = generateRefreshToken(id);
   setTokenCookies(res, accessToken, refreshToken);
+  return { accessToken, refreshToken };
 };
 
 const validationError = (message) => {
@@ -57,8 +65,8 @@ export const register = async (req, res, next) => {
       generationsResetAt: nextMonthStart()
     };
     const user = usingDb() ? await User.create(payload) : await createDevUser(payload);
-    issueSession(res, user);
-    res.status(201).json({ success: true, user: toPublicUser(user), message: 'Account created successfully' });
+    const { accessToken, refreshToken } = issueSession(res, user);
+    sendTokenResponse(res, 201, user, accessToken, refreshToken, toPublicUser(user));
   } catch (error) {
     next(error);
   }
@@ -76,8 +84,8 @@ export const login = async (req, res, next) => {
       return;
     }
 
-    issueSession(res, user);
-    res.json({ success: true, user: toPublicUser(user), message: 'Logged in successfully' });
+    const { accessToken, refreshToken } = issueSession(res, user);
+    sendTokenResponse(res, 200, user, accessToken, refreshToken, toPublicUser(user));
   } catch (error) {
     next(error);
   }
@@ -94,9 +102,9 @@ export const logout = async (req, res, next) => {
 
 export const refreshToken = async (req, res, next) => {
   try {
-    const token = req.cookies?.refreshToken;
+    const token = req.body?.refreshToken || req.headers.authorization?.replace(/^Bearer\s+/i, '');
     if (!token) {
-      res.status(401).json({ success: false, error: 'Refresh token required' });
+      res.status(401).json({ success: false, message: 'Refresh token required' });
       return;
     }
 
@@ -104,18 +112,23 @@ export const refreshToken = async (req, res, next) => {
     try {
       payload = verifyRefreshToken(token);
     } catch (error) {
-      res.status(401).json({ success: false, error: 'Invalid or expired refresh token' });
+      res.status(401).json({ success: false, message: 'Invalid or expired refresh token' });
       return;
     }
 
     const user = usingDb() ? await User.findById(payload.userId) : findDevUserById(payload.userId);
     if (!user) {
-      res.status(401).json({ success: false, error: 'Invalid or expired refresh token' });
+      res.status(401).json({ success: false, message: 'Invalid or expired refresh token' });
       return;
     }
 
-    issueSession(res, user);
-    res.json({ success: true, message: 'Token refreshed' });
+    const { accessToken, refreshToken: newRefreshToken } = issueSession(res, user);
+    res.json({
+      success: true,
+      accessToken,
+      refreshToken: newRefreshToken,
+      message: 'Token refreshed'
+    });
   } catch (error) {
     next(error);
   }
@@ -135,8 +148,11 @@ export const googleCallback = async (req, res, next) => {
       res.redirect(`${clientUrl()}/login?error=oauth_failed`);
       return;
     }
-    issueSession(res, req.user);
-    res.redirect(`${clientUrl()}/auth/callback?success=true`);
+    const { accessToken, refreshToken } = issueSession(res, req.user);
+    const redirectUrl = new URL(`${clientUrl()}/auth/callback`);
+    redirectUrl.searchParams.set('accessToken', accessToken);
+    redirectUrl.searchParams.set('refreshToken', refreshToken);
+    res.redirect(redirectUrl.toString());
   } catch (error) {
     next(error);
   }

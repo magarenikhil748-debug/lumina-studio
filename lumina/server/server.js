@@ -54,8 +54,6 @@ const buildConfig = () => {
     googleClientSecret: process.env.GOOGLE_CLIENT_SECRET || '',
     googleCallbackUrl: process.env.GOOGLE_CALLBACK_URL || 'http://localhost:5000/api/auth/google/callback',
     clientUrl: process.env.CLIENT_URL || 'http://localhost:5173',
-    cookieSecure: process.env.COOKIE_SECURE === 'true',
-    cookieSameSite: process.env.COOKIE_SAME_SITE || 'lax',
     stripeSecretKey: process.env.STRIPE_SECRET_KEY || '',
     stripeWebhookSecret: process.env.STRIPE_WEBHOOK_SECRET || '',
     version: process.env.npm_package_version || '1.0.0'
@@ -88,7 +86,6 @@ async function startServer() {
       { default: cors },
       { default: helmet },
       { default: morgan },
-      { default: cookieParser },
       { default: passport },
       { default: mongoose },
       { default: connectDB },
@@ -100,7 +97,6 @@ async function startServer() {
       import('cors'),
       import('helmet'),
       import('morgan'),
-      import('cookie-parser'),
       import('passport'),
       import('mongoose'),
       import('./config/db.js'),
@@ -165,8 +161,7 @@ async function startServer() {
       },
       credentials: true,
       methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-      allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
-      exposedHeaders: ['Set-Cookie']
+      allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin']
     };
 
     app.use(cors(corsOptions));
@@ -176,7 +171,6 @@ async function startServer() {
     app.use(generalLimiter);
     app.use(express.json({ limit: '750kb' }));
     app.use(express.urlencoded({ extended: true, limit: '750kb' }));
-    app.use(cookieParser());
     app.use(passport.initialize());
 
     if (config.nodeEnv !== 'production') {

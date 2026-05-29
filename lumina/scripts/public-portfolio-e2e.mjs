@@ -119,13 +119,6 @@ const record = async (name, action, assertion) => {
   }
 };
 
-const cookieHeaderFrom = (response) => {
-  const cookies = typeof response.headers.getSetCookie === 'function'
-    ? response.headers.getSetCookie()
-    : [response.headers.get('set-cookie')].filter(Boolean);
-  return cookies.map((cookie) => cookie.split(';')[0]).join('; ');
-};
-
 const api = async (pathName, options = {}) => {
   const response = await fetch(`${BACKEND_URL}${pathName}`, {
     ...options,
@@ -143,10 +136,10 @@ const register = await api('/api/auth/register', {
   method: 'POST',
   body: JSON.stringify({ name: 'Public Page Tester', email, password })
 });
-const cookieHeader = cookieHeaderFrom(register.response);
+const authHeader = { Authorization: `Bearer ${register.data.accessToken}` };
 const portfolio = await api('/api/portfolios', {
   method: 'POST',
-  headers: { Cookie: cookieHeader },
+  headers: authHeader,
   body: JSON.stringify({
     name: 'Public Page Tester',
     title: 'Portfolio Experience Designer',
@@ -232,7 +225,7 @@ try {
   cdp?.close();
   chrome.kill();
   try {
-    await api(`/api/portfolios/${id}`, { method: 'DELETE', headers: { Cookie: cookieHeader } });
+    await api(`/api/portfolios/${id}`, { method: 'DELETE', headers: authHeader });
   } catch {
     // The portfolio may already have been removed during a failed cleanup retry.
   }

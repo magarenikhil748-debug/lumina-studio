@@ -16,7 +16,11 @@ export const requireAuth = (req, res, next) => {
 };
 
 export const requirePro = (req, res, next) => {
-  if (['pro', 'studio'].includes(req.user?.tier) || ['pro', 'studio'].includes(req.user?.plan)) {
+  const effectiveTier = typeof req.user?.getEffectiveTier === 'function'
+    ? req.user.getEffectiveTier()
+    : req.user?.tier || req.user?.plan;
+
+  if (['pro', 'studio'].includes(effectiveTier)) {
     next();
     return;
   }

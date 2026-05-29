@@ -3,7 +3,7 @@ const CACHE_TTL = 5 * 60 * 1000;
 
 export function cacheMiddleware(duration = CACHE_TTL) {
   return (req, res, next) => {
-    if (req.headers.authorization || req.cookies?.accessToken) {
+    if (req.headers.authorization) {
       next();
       return;
     }
