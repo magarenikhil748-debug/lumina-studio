@@ -7,11 +7,10 @@ import { BarChart3, Edit3, Eye, Globe2, Lock, Share2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import AnalyticsDrawer from '../components/AnalyticsDrawer';
 import ShareModal from '../components/ShareModal';
-import BoldLayout from '../components/layouts/BoldLayout';
-import CreativeLayout from '../components/layouts/CreativeLayout';
-import MinimalLayout from '../components/layouts/MinimalLayout';
 import PortfolioSkeleton from '../components/layouts/PortfolioSkeleton';
 import { portfolioShape } from '../components/layouts/layoutShared';
+import TemplateRenderer from '../templates/TemplateRenderer';
+import { resolveTemplateId } from '../templates/shared/templateData';
 import NotFoundPage from './NotFoundPage';
 import { fetchPortfolio, portfolioAPI } from '../utils/api';
 import { getPublicBaseUrl } from '../utils/publicUrl';
@@ -107,11 +106,7 @@ const PublicPortfolioPage = () => {
     knowsAbout: (portfolio.skills || []).map((skill) => skill.name).filter(Boolean)
   } : null, [portfolio, publicUrl]);
 
-  const Layout = useMemo(() => {
-    if (portfolio?.layout === 'bold') return BoldLayout;
-    if (['creative', 'editorial', 'premium'].includes(portfolio?.layout)) return CreativeLayout;
-    return MinimalLayout;
-  }, [portfolio?.layout]);
+  const templateId = useMemo(() => resolveTemplateId(portfolio || {}, portfolio?.templateId), [portfolio]);
 
   useEffect(() => {
     if (!portfolio) return;
@@ -164,7 +159,7 @@ const PublicPortfolioPage = () => {
       )}
 
       <div className={portfolio.isOwner ? 'pt-16 sm:pt-14' : ''}>
-        <Layout portfolio={portfolio} />
+        <TemplateRenderer portfolio={portfolio} templateId={templateId} />
       </div>
 
       <ShareModal isOpen={shareOpen} onClose={() => setShareOpen(false)} portfolio={portfolio} publicUrl={publicUrl} />

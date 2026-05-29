@@ -62,6 +62,7 @@ export const defaultDraft = {
   projects: [],
   layout: 'minimal',
   template: 'premium',
+  templateId: 'glass',
   colorPalette: palettes[0],
   plan: 'free',
   qualityScore: 0,
@@ -94,6 +95,7 @@ export const samplePortfolio = {
   ],
   layout: 'premium',
   template: 'premium',
+  templateId: 'glass',
   plan: 'pro',
   qualityScore: 94
 };

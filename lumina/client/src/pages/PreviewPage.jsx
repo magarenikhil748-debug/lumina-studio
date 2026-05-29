@@ -6,12 +6,14 @@ import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { BarChart3, Check, Code2, Copy, Download, ExternalLink, FileJson, Linkedin, Monitor, RefreshCw, Save, Smartphone, Tablet, Twitter, WandSparkles } from 'lucide-react';
 import AnimatedBackground from '../components/AnimatedBackground';
 import AuthPromptModal from '../components/AuthPromptModal';
-import GeneratedPortfolio from '../components/GeneratedPortfolio';
 import Navbar from '../components/Navbar';
+import TemplatePicker from '../components/TemplatePicker';
 import { useAuth } from '../context/AuthContext';
 import { useGemini } from '../hooks/useGemini';
 import { usePortfolio } from '../hooks/usePortfolio';
-import { buildStandaloneHtml, calculateQuality, palettes, plans, samplePortfolio, templates } from '../utils/helpers';
+import TemplateRenderer from '../templates/TemplateRenderer';
+import { resolveTemplateId } from '../templates/shared/templateData';
+import { buildStandaloneHtml, calculateQuality, palettes, plans, samplePortfolio } from '../utils/helpers';
 import { trackPortfolioExport } from '../utils/api';
 import { getPublicBaseUrl } from '../utils/publicUrl';
 
@@ -20,6 +22,12 @@ const publicBaseUrl = getPublicBaseUrl();
 
 const openShareWindow = (url) => window.open(url, '_blank', 'width=600,height=400');
 
+const normalizeInitialPortfolio = (portfolio) => ({
+  ...portfolio,
+  templateId: resolveTemplateId(portfolio, portfolio.templateId),
+  template: resolveTemplateId(portfolio, portfolio.templateId)
+});
+
 const PreviewPage = () => {
   const reduceMotion = useReducedMotion();
   const { state } = useLocation();
@@ -27,7 +35,7 @@ const PreviewPage = () => {
   const { isAuthenticated } = useAuth();
   const { save, isSaving } = usePortfolio();
   const { generate, isGenerating } = useGemini();
-  const [portfolio, setPortfolio] = useState(base);
+  const [portfolio, setPortfolio] = useState(() => normalizeInitialPortfolio(base));
   const [device, setDevice] = useState('desktop');
   const [showConfetti, setShowConfetti] = useState(false);
   const [showAuthPrompt, setShowAuthPrompt] = useState(false);
@@ -65,7 +73,7 @@ const PreviewPage = () => {
       setShowAuthPrompt(true);
       return;
     }
-    const saved = await save({ ...portfolio, qualityScore: quality.score });
+    const saved = await save({ ...portfolio, templateId: resolveTemplateId(portfolio, portfolio.templateId), qualityScore: quality.score });
     if (saved) {
       setPortfolio(saved);
       setLivePortfolio(saved);
@@ -95,6 +103,8 @@ const PreviewPage = () => {
       tagline: result.tagline,
       projects: portfolio.projects.map((project, index) => ({ ...project, description: result.projectDescriptions?.[index] || project.description })),
       layout: result.layoutSuggestion || portfolio.layout,
+      templateId: portfolio.templateId || 'glass',
+      template: portfolio.templateId || portfolio.template || 'glass',
       colorPalette: result.colorPalette || portfolio.colorPalette,
       skillsHeadline: result.skillsHeadline,
       generationMetadata: result.metadata
@@ -170,6 +180,13 @@ const PreviewPage = () => {
           </motion.section>
         )}
 
+        <div className="mb-6">
+          <TemplatePicker
+            selectedTemplate={resolveTemplateId(portfolio, portfolio.templateId)}
+            onSelect={(templateId) => updatePortfolio({ templateId, template: templateId })}
+          />
+        </div>
+
         <div className="grid gap-5 lg:grid-cols-[310px_1fr]">
           <motion.aside whileHover={reduceMotion ? undefined : { y: -8, boxShadow: '0 0 30px rgba(168,85,247,0.3)' }} transition={{ type: 'spring', stiffness: 320, damping: 26 }} className="h-fit space-y-5 rounded-2xl border border-white/[0.08] bg-[rgba(255,255,255,0.05)] p-5 backdrop-blur-xl">
             <div className="rounded-2xl border border-white/[0.08] bg-[#0a0a0f]/60 p-4">
@@ -183,13 +200,6 @@ const PreviewPage = () => {
                   <WandSparkles className="h-4 w-4" /> Upgrade to Pro preview
                 </button>
               )}
-            </div>
-
-            <div>
-              <h2 className="mb-3 font-bold text-white">Template</h2>
-              <div className="grid gap-2">
-                {templates.map((item) => <button key={item.id} onClick={() => updatePortfolio({ layout: item.id, template: item.id })} className={`rounded-full px-4 py-3 text-left capitalize ${portfolio.layout === item.id ? 'btn-primary' : 'bg-[rgba(255,255,255,0.05)] text-white/50'}`}>{item.name}</button>)}
-              </div>
             </div>
 
             <div>
@@ -223,7 +233,18 @@ const PreviewPage = () => {
 
           <section className="overflow-x-auto rounded-2xl border border-white/[0.08] bg-[#0a0a0f]/60 p-4">
             <div className="mx-auto transition-all duration-300" style={{ width: widths[device], maxWidth: '100%' }}>
-              <GeneratedPortfolio portfolio={portfolio} />
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={resolveTemplateId(portfolio, portfolio.templateId)}
+                  initial={reduceMotion ? { opacity: 1 } : { opacity: 0, scale: 0.98, filter: 'blur(4px)' }}
+                  animate={{ opacity: 1, scale: 1, filter: 'blur(0px)' }}
+                  exit={reduceMotion ? { opacity: 0 } : { opacity: 0, scale: 0.98, filter: 'blur(4px)' }}
+                  transition={{ duration: reduceMotion ? 0 : 0.3, ease: 'easeInOut' }}
+                  className="overflow-hidden rounded-2xl"
+                >
+                  <TemplateRenderer portfolio={portfolio} templateId={portfolio.templateId} />
+                </motion.div>
+              </AnimatePresence>
             </div>
           </section>
         </div>

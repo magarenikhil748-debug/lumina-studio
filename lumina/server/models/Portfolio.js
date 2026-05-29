@@ -48,6 +48,11 @@ const portfolioSchema = new mongoose.Schema({
   projects: [projectSchema],
   layout: { type: String, enum: ['minimal', 'bold', 'creative', 'editorial', 'premium'], default: 'premium' },
   template: { type: String, default: 'premium' },
+  templateId: {
+    type: String,
+    enum: ['terminal', 'minimalcode', 'blueprint', 'runway', 'canvas', 'studio', 'cosmos', 'neon', 'glass'],
+    default: 'glass'
+  },
   colorPalette: { type: colorPaletteSchema, required: true },
   plan: { type: String, enum: ['free', 'pro', 'studio'], default: 'free' },
   slug: { type: String, unique: true, sparse: true, index: true },

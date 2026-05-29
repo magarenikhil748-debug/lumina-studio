@@ -10,6 +10,7 @@ import { ensureUniqueSlug, generateSlug } from '../utils/slugGenerator.js';
 import { ensureHex, isValidEmail, isValidUrl, strip } from '../utils/validation.js';
 
 const fallbackPalette = { primary: '#a78bfa', secondary: '#2dd4bf', accent: '#fb7185', bg: '#08080d', text: '#f8fafc' };
+const templateIds = ['terminal', 'minimalcode', 'blueprint', 'runway', 'canvas', 'studio', 'cosmos', 'neon', 'glass'];
 
 const ownerIdOf = (user) => String(user?._id || user?.id || '');
 
@@ -101,6 +102,13 @@ const buildAnalytics = ({ days, viewsOverTime, totalViews, uniqueSessions, topRe
 };
 
 const normalizePortfolio = (body, user, existing = {}) => {
+  const rawTemplateId = strip(body.templateId || body.template || existing.templateId || existing.template || 'glass').toLowerCase();
+  const templateId = templateIds.includes(rawTemplateId) ? rawTemplateId : 'glass';
+  const legacyLayout = ['minimal', 'bold', 'creative', 'editorial', 'premium'].includes(body.layout)
+    ? body.layout
+    : ['minimal', 'bold', 'creative', 'editorial', 'premium'].includes(existing.layout)
+      ? existing.layout
+      : 'premium';
   const projects = Array.isArray(body.projects) ? body.projects.slice(0, 5).map((project) => ({
     title: strip(project.title),
     description: strip(project.description),
@@ -125,8 +133,9 @@ const normalizePortfolio = (body, user, existing = {}) => {
     skills: Array.isArray(body.skills) ? body.skills.map((skill) => ({ name: strip(skill.name), category: strip(skill.category) || 'Other' })).filter((skill) => skill.name) : [],
     skillsHeadline: strip(body.skillsHeadline || 'Core strengths'),
     projects,
-    layout: ['minimal', 'bold', 'creative', 'editorial', 'premium'].includes(body.layout) ? body.layout : 'premium',
-    template: strip(body.template || body.layout || 'premium'),
+    layout: legacyLayout,
+    template: templateId,
+    templateId,
     colorPalette: {
       primary: ensureHex(body.colorPalette?.primary, fallbackPalette.primary),
       secondary: ensureHex(body.colorPalette?.secondary, fallbackPalette.secondary),
