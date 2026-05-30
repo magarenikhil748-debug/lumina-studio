@@ -3,7 +3,6 @@ import { motion, useReducedMotion } from 'framer-motion';
 import { CreditCard, ExternalLink, FileText, Sparkles } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { Link } from 'react-router-dom';
-import AnimatedBackground from '../components/AnimatedBackground';
 import Navbar from '../components/Navbar';
 import TierBadge from '../components/TierBadge';
 import BillingDashboard from '../components/billing/BillingDashboard';
@@ -49,9 +48,8 @@ const BillingPage = () => {
   const planName = PLANS[plan.plan]?.name || 'Starter';
 
   return (
-    <main className="min-h-screen bg-[#0a0a0f] px-4 py-28 text-white">
-      <AnimatedBackground />
-      <Navbar compact />
+    <main className="lumina-page min-h-screen px-4 py-28 text-white">
+      <Navbar />
       <motion.div
         initial={reduceMotion ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}

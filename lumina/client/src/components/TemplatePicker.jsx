@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import PropTypes from 'prop-types';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
-import { Boxes } from 'lucide-react';
+import { Boxes, Check, Lock } from 'lucide-react';
 import usePlan from '../hooks/usePlan';
 import UpgradeModal from './UpgradeModal';
 import TemplatePreview from '../templates/TemplatePreview';
@@ -13,7 +13,7 @@ const normalizePlan = (planState) => {
   return plan;
 };
 
-const TemplatePicker = ({ selectedTemplate, onSelect }) => {
+const TemplatePicker = ({ selectedTemplate, onSelect, compact = false }) => {
   const reduceMotion = useReducedMotion();
   const planState = usePlan();
   const currentPlan = normalizePlan(planState);
@@ -27,6 +27,119 @@ const TemplatePicker = ({ selectedTemplate, onSelect }) => {
     }
     onSelect(template.id);
   };
+
+  if (compact) {
+    return (
+      <section>
+        <motion.div
+          className="quiet-scrollbar flex snap-x gap-3 overflow-x-auto pb-2"
+          initial={reduceMotion ? false : { opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3 }}
+        >
+          {templates.map((template) => {
+            const locked = !canUseTemplate(template, currentPlan);
+            const selected = selectedTemplate === template.id;
+            return (
+              <motion.button
+                key={template.id}
+                type="button"
+                onClick={() => handleSelect(template)}
+                whileHover={reduceMotion ? undefined : { y: -3, scale: selected ? 1.04 : 1.02 }}
+                whileTap={reduceMotion ? undefined : { scale: 0.98 }}
+                style={{
+                  position: 'relative',
+                  minWidth: '74px',
+                  width: '74px',
+                  height: '94px',
+                  borderRadius: '14px',
+                  border: selected ? '1px solid rgba(192,132,252,0.85)' : '1px solid rgba(255,255,255,0.08)',
+                  background: selected ? 'rgba(168,85,247,0.14)' : 'rgba(255,255,255,0.04)',
+                  color: '#fff',
+                  cursor: 'pointer',
+                  overflow: 'hidden',
+                  padding: '6px',
+                  scrollSnapAlign: 'start',
+                  boxShadow: selected ? '0 0 24px rgba(168,85,247,0.24)' : 'none'
+                }}
+                aria-label={`${locked ? 'Locked ' : ''}${template.name} template`}
+              >
+                <motion.span
+                  animate={reduceMotion ? undefined : {
+                    background: [
+                      `linear-gradient(135deg, ${template.colors[0]}, ${template.colors[1]})`,
+                      `linear-gradient(135deg, ${template.colors[1]}, ${template.colors[2]})`,
+                      `linear-gradient(135deg, ${template.colors[2]}, ${template.colors[0]})`
+                    ]
+                  }}
+                  transition={{ duration: 4, repeat: Infinity, ease: 'linear' }}
+                  style={{
+                    display: 'block',
+                    height: '46px',
+                    borderRadius: '10px',
+                    background: `linear-gradient(135deg, ${template.colors[0]}, ${template.colors[1]})`,
+                    opacity: locked ? 0.45 : 1
+                  }}
+                />
+                <span
+                  style={{
+                    display: 'block',
+                    marginTop: '6px',
+                    fontSize: '10px',
+                    fontWeight: 700,
+                    lineHeight: 1.1,
+                    color: selected ? '#fff' : 'rgba(255,255,255,0.62)',
+                    textAlign: 'left'
+                  }}
+                >
+                  {template.name}
+                </span>
+                {selected && (
+                  <span
+                    style={{
+                      position: 'absolute',
+                      right: '6px',
+                      top: '6px',
+                      width: '18px',
+                      height: '18px',
+                      borderRadius: '50%',
+                      background: '#fff',
+                      color: '#7c3aed',
+                      display: 'grid',
+                      placeItems: 'center'
+                    }}
+                  >
+                    <Check size={11} />
+                  </span>
+                )}
+                {locked && (
+                  <span
+                    style={{
+                      position: 'absolute',
+                      inset: 0,
+                      display: 'grid',
+                      placeItems: 'center',
+                      background: 'rgba(5,5,8,0.56)',
+                      backdropFilter: 'blur(2px)',
+                      color: '#fff'
+                    }}
+                  >
+                    <Lock size={14} />
+                  </span>
+                )}
+              </motion.button>
+            );
+          })}
+        </motion.div>
+        <UpgradeModal
+          isOpen={Boolean(lockedTemplate)}
+          onClose={() => setLockedTemplate(null)}
+          feature="template"
+          requiredTier={lockedTemplate?.tier === 'studio' ? 'studio' : 'pro'}
+        />
+      </section>
+    );
+  }
 
   return (
     <section className="rounded-3xl border border-white/[0.08] bg-white/[0.045] p-5 text-white backdrop-blur-xl">
@@ -71,6 +184,7 @@ const TemplatePicker = ({ selectedTemplate, onSelect }) => {
 };
 
 TemplatePicker.propTypes = {
+  compact: PropTypes.bool,
   selectedTemplate: PropTypes.string.isRequired,
   onSelect: PropTypes.func.isRequired
 };

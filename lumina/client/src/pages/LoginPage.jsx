@@ -7,7 +7,6 @@ import { useForm } from 'react-hook-form';
 import toast from 'react-hot-toast';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { z } from 'zod';
-import AnimatedBackground from '../components/AnimatedBackground';
 import Navbar from '../components/Navbar';
 import { useAuth } from '../context/AuthContext';
 
@@ -91,7 +90,10 @@ const LoginPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { isAuthenticated, isLoading, login, loginWithGoogle, register: registerUser } = useAuth();
-  const [activeTab, setActiveTab] = useState(() => new URLSearchParams(location.search).get('mode') === 'create' ? 'create' : 'signin');
+  const [activeTab, setActiveTab] = useState(() => {
+    const params = new URLSearchParams(location.search);
+    return params.get('mode') === 'create' || params.get('tab') === 'register' ? 'create' : 'signin';
+  });
   const from = location.state?.from || '/dashboard';
 
   const loginForm = useForm({ resolver: zodResolver(loginSchema), defaultValues: { email: '', password: '' } });
@@ -141,14 +143,13 @@ const LoginPage = () => {
   });
 
   return (
-    <main className="min-h-screen bg-[#0a0a0f] px-4 py-28 text-white">
-      <AnimatedBackground />
-      <Navbar compact />
+    <main className="lumina-page flex min-h-screen items-center px-4 py-28 text-white">
+      <Navbar />
       <motion.section
         initial={reduceMotion ? { opacity: 1, y: 0 } : { opacity: 0, y: 30 }}
         animate={{ opacity: 1, y: 0 }}
         transition={reduceMotion ? { duration: 0 } : { duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
-        className="mx-auto max-w-md rounded-2xl border border-white/[0.08] bg-[rgba(255,255,255,0.05)] p-5 shadow-[0_0_40px_rgba(168,85,247,0.18)] backdrop-blur-xl sm:p-7"
+        className="glass-card mx-auto w-full max-w-md p-5 shadow-[0_0_60px_rgba(168,85,247,0.2)] sm:p-7"
       >
         <Link to="/" className="mb-6 flex items-center justify-center gap-3 text-lg font-extrabold">
           <span className="brand-mark" aria-hidden="true"><span>L</span></span>

@@ -19,13 +19,19 @@ const daysUntil = (value) => {
   return Math.max(0, Math.ceil((new Date(value).getTime() - Date.now()) / (24 * 60 * 60 * 1000)));
 };
 
-const formatDate = (value) => (value ? new Intl.DateTimeFormat('en-US', { month: 'long', day: 'numeric', year: 'numeric' }).format(new Date(value)) : 'Not scheduled');
+const formatDate = (value) => {
+  if (!value) return null;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  return new Intl.DateTimeFormat('en-US', { month: 'long', day: 'numeric', year: 'numeric' }).format(date);
+};
 
 const BillingDashboard = () => {
   const plan = usePlan();
   const [isOpeningPortal, setIsOpeningPortal] = useState(false);
   const planName = PLANS[plan.plan]?.name || 'Starter';
   const status = plan.subscriptionStatus || 'none';
+  const periodEnd = formatDate(plan.currentPeriodEnd);
 
   const openPortal = async () => {
     setIsOpeningPortal(true);
@@ -54,9 +60,13 @@ const BillingDashboard = () => {
         <div>
           <p className="flex items-center gap-2 text-sm font-black text-[#c4b5fd]"><Sparkles className="h-4 w-4" /> Billing</p>
           <h2 className="mt-2 text-2xl font-black">{planName}</h2>
-          <p className="mt-1 text-sm text-white/50">Current period ends {formatDate(plan.currentPeriodEnd)}</p>
+          <p className="mt-1 text-sm text-white/50">
+            {periodEnd ? `Current period ends ${periodEnd}` : plan.plan === 'starter' ? 'Free plan - no billing' : 'Current period -'}
+          </p>
         </div>
-        <span className={`w-fit rounded-full px-3 py-1 text-xs font-black uppercase ${statusStyles[status] || statusStyles.none}`}>{status.replace('_', ' ')}</span>
+        {status !== 'none' ? (
+          <span className={`w-fit rounded-full px-3 py-1 text-xs font-black uppercase ${statusStyles[status] || statusStyles.none}`}>{status.replace('_', ' ')}</span>
+        ) : null}
       </div>
 
       {plan.isTrialing && (

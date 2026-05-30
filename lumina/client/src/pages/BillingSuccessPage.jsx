@@ -3,7 +3,6 @@ import confetti from 'canvas-confetti';
 import { motion, useReducedMotion } from 'framer-motion';
 import { Check, Sparkles } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
-import AnimatedBackground from '../components/AnimatedBackground';
 import Navbar from '../components/Navbar';
 import usePlan from '../hooks/usePlan';
 import { PLANS } from '../lib/stripe/plans';
@@ -36,9 +35,8 @@ const BillingSuccessPage = () => {
   }, [navigate]);
 
   return (
-    <main className="grid min-h-screen place-items-center bg-[#0a0a0f] px-4 py-28 text-white">
-      <AnimatedBackground />
-      <Navbar compact />
+    <main className="lumina-page grid min-h-screen place-items-center px-4 py-28 text-white">
+      <Navbar />
       <motion.section
         initial={reduceMotion ? { opacity: 1, y: 0 } : { opacity: 0, y: 24, scale: 0.98 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}

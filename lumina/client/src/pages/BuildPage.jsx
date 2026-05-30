@@ -1,7 +1,6 @@
 import { useCallback, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
-import AnimatedBackground from '../components/AnimatedBackground';
 import AuthPromptModal from '../components/AuthPromptModal';
 import LoadingScreen from '../components/LoadingScreen';
 import Navbar from '../components/Navbar';
@@ -50,9 +49,8 @@ const BuildPage = () => {
   };
 
   return (
-    <main className="min-h-screen bg-[#0a0a0f] px-4 py-28 text-white">
-      <AnimatedBackground />
-      <Navbar compact />
+    <main className="lumina-page min-h-screen px-4 py-28 text-white">
+      <Navbar />
       <motion.div
         initial={reduceMotion ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
         whileInView={{ opacity: 1, y: 0 }}

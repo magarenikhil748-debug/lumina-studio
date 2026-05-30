@@ -1,333 +1,498 @@
-import PropTypes from 'prop-types';
 import { useEffect, useMemo, useState } from 'react';
-import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
-import { BarChart3, Check, Copy, Edit3, Eye, Globe2, Lock, Plus, Share2, Sparkles, Trash2, TrendingUp } from 'lucide-react';
-import toast from 'react-hot-toast';
+import PropTypes from 'prop-types';
 import { Link, useNavigate } from 'react-router-dom';
-import AnalyticsDrawer from '../components/AnalyticsDrawer';
-import AnimatedBackground from '../components/AnimatedBackground';
+import { AnimatePresence, motion } from 'framer-motion';
+import {
+  AlertTriangle,
+  BarChart2,
+  Check,
+  Copy,
+  Edit3,
+  ExternalLink,
+  Eye,
+  Globe,
+  Plus,
+  Sparkles,
+  Trash2,
+  Zap
+} from 'lucide-react';
+import toast from 'react-hot-toast';
 import Navbar from '../components/Navbar';
-import ShareModal from '../components/ShareModal';
 import TierBadge from '../components/TierBadge';
-import UsageMeter from '../components/UsageMeter';
-import BillingDashboard from '../components/billing/BillingDashboard';
+import Button from '../components/ui/Button';
+import Card from '../components/ui/Card';
 import LoadingScreen from '../components/LoadingScreen';
 import { useAuth } from '../context/AuthContext';
-import { portfolioAPI } from '../utils/api';
-import { formatPublicUrl, getPublicBaseUrl } from '../utils/publicUrl';
+import usePlan from '../hooks/usePlan';
+import { billingAPI, portfolioAPI } from '../utils/api';
+import { getPublicBaseUrl } from '../utils/publicUrl';
 
 const publicBaseUrl = getPublicBaseUrl();
 
-const formatDate = (value) => new Intl.DateTimeFormat('en-US', {
-  month: 'long',
-  day: 'numeric',
-  year: 'numeric'
-}).format(new Date(value || Date.now()));
-
-const SkeletonCard = () => (
-  <div className="h-64 animate-pulse rounded-2xl border border-white/[0.08] bg-[rgba(255,255,255,0.05)] p-5">
-    <div className="h-5 w-2/3 rounded-full bg-white/[0.08]" />
-    <div className="mt-4 h-4 w-1/2 rounded-full bg-white/[0.08]" />
-    <div className="mt-10 h-24 rounded-2xl bg-white/[0.06]" />
-    <div className="mt-5 h-10 rounded-full bg-white/[0.08]" />
-  </div>
-);
-
-const DeleteModal = ({ portfolio, onCancel, onConfirm }) => {
-  const reduceMotion = useReducedMotion();
-  return (
-    <motion.div className="fixed inset-0 z-[80] grid place-items-center bg-black/60 p-4 backdrop-blur-md" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-      <motion.div
-        initial={reduceMotion ? { opacity: 1, scale: 1 } : { opacity: 0, scale: 0.94 }}
-        animate={{ opacity: 1, scale: 1 }}
-        exit={reduceMotion ? { opacity: 0 } : { opacity: 0, scale: 0.94 }}
-        transition={reduceMotion ? { duration: 0 } : { type: 'spring', stiffness: 360, damping: 30 }}
-        className="w-full max-w-md rounded-2xl border border-white/[0.08] bg-[#0a0a0f] p-6 shadow-[0_0_40px_rgba(168,85,247,0.22)]"
-      >
-        <h2 className="text-2xl font-black text-white">Delete Portfolio?</h2>
-        <p className="mt-2 text-white/50">This action cannot be undone. “{portfolio?.name}” will be removed from your dashboard.</p>
-        <div className="mt-6 flex justify-end gap-3">
-          <button onClick={onCancel} className="rounded-full border border-white/[0.08] px-5 py-3 font-bold text-white">Cancel</button>
-          <button onClick={onConfirm} className="rounded-full bg-red-500 px-5 py-3 font-bold text-white shadow-[0_0_24px_rgba(239,68,68,0.28)]">Delete</button>
-        </div>
-      </motion.div>
-    </motion.div>
-  );
+const normalizePlan = (value) => {
+  if (!value || value === 'free') return 'starter';
+  return value;
 };
 
-DeleteModal.propTypes = {
-  portfolio: PropTypes.shape({ name: PropTypes.string }),
-  onCancel: PropTypes.func.isRequired,
-  onConfirm: PropTypes.func.isRequired
+const formatDate = (value) => {
+  if (!value) return null;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  return date.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
 };
 
-const PortfolioCard = ({ portfolio, copiedId, onAnalytics, onCopy, onDelete, onShare, onToggleVisibility }) => {
-  const reduceMotion = useReducedMotion();
-  const navigate = useNavigate();
-  const id = portfolio.id || portfolio._id;
-  const layout = portfolio.layout || portfolio.template || 'minimal';
-  const publicUrl = `${publicBaseUrl}/p/${portfolio.slug}`;
-  const isPublic = portfolio.isPublic !== false;
-
-  return (
-    <motion.article
-      layout={!reduceMotion}
-      initial={reduceMotion ? { opacity: 1, y: 0 } : { opacity: 0, y: 18 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={reduceMotion ? { opacity: 0 } : { opacity: 0, y: -18, scale: 0.98 }}
-      whileHover={reduceMotion ? undefined : { y: -4, boxShadow: '0 0 30px rgba(168,85,247,0.3)' }}
-      transition={{ type: 'spring', stiffness: 320, damping: 26 }}
-      className="rounded-2xl border border-white/[0.08] bg-[rgba(255,255,255,0.05)] p-5 backdrop-blur-xl"
-    >
-      <div className="mb-5 flex items-start justify-between gap-4">
-        <div>
-          <h3 className="text-xl font-black text-white">{portfolio.name}</h3>
-          <p className="mt-1 text-sm text-white/50">{portfolio.title}</p>
-        </div>
-        <div className="flex flex-col items-end gap-2">
-          <span className="rounded-full bg-[#a855f7]/15 px-3 py-1 text-xs font-bold capitalize text-[#c4b5fd]">{layout}</span>
-          <button type="button" onClick={() => onToggleVisibility(portfolio)} className={`inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-bold ${isPublic ? 'bg-emerald-400/12 text-emerald-200' : 'bg-white/[0.08] text-white/50'}`}>
-            {isPublic ? <Globe2 className="h-3.5 w-3.5" aria-hidden="true" /> : <Lock className="h-3.5 w-3.5" aria-hidden="true" />}
-            {isPublic ? 'Public' : 'Private'}
-          </button>
-        </div>
-      </div>
-      <div className="rounded-2xl border border-white/[0.08] bg-[#0a0a0f]/60 p-4">
-        <p className="text-sm text-white/45">Created</p>
-        <p className="mt-1 font-semibold text-white">{formatDate(portfolio.createdAt)}</p>
-        <p className="mt-4 flex items-center gap-2 text-sm text-white/55"><TrendingUp className="h-4 w-4 text-[#60a5fa]" aria-hidden="true" />{portfolio.views || 0} views</p>
-        {portfolio.slug && (
-          <a href={publicUrl} target="_blank" rel="noreferrer" className="mt-4 block truncate text-sm font-semibold text-[#c4b5fd] hover:text-white">
-            {formatPublicUrl(publicUrl)}
-          </a>
-        )}
-      </div>
-      <div className="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-3">
-        <button onClick={() => onCopy(portfolio)} className="inline-flex items-center justify-center gap-2 rounded-full border border-white/[0.08] px-3 py-2 text-sm font-bold text-white hover:bg-white/[0.06]">
-          {copiedId === id ? <Check className="h-4 w-4 text-[#c4b5fd]" /> : <Copy className="h-4 w-4" />} Copy Link
-        </button>
-        <button onClick={() => onShare(portfolio)} className="inline-flex items-center justify-center gap-2 rounded-full border border-white/[0.08] px-3 py-2 text-sm font-bold text-white hover:bg-white/[0.06]"><Share2 className="h-4 w-4" />Share</button>
-        <button onClick={() => onAnalytics(portfolio)} className="inline-flex items-center justify-center gap-2 rounded-full border border-white/[0.08] px-3 py-2 text-sm font-bold text-white hover:bg-white/[0.06]"><BarChart3 className="h-4 w-4" />Analytics</button>
-        <button onClick={() => navigate(`/preview?id=${id}`, { state: { portfolio } })} className="inline-flex items-center justify-center gap-2 rounded-full border border-white/[0.08] px-3 py-2 text-sm font-bold text-white hover:bg-white/[0.06]"><Eye className="h-4 w-4" />Preview</button>
-        <button onClick={() => navigate(`/build?id=${id}`, { state: { portfolio } })} className="inline-flex items-center justify-center gap-2 rounded-full border border-white/[0.08] px-3 py-2 text-sm font-bold text-white hover:bg-white/[0.06]"><Edit3 className="h-4 w-4" />Edit</button>
-        <button onClick={() => onDelete(portfolio)} className="inline-flex items-center justify-center gap-2 rounded-full border border-red-400/20 px-3 py-2 text-sm font-bold text-red-300 hover:bg-red-400/10"><Trash2 className="h-4 w-4" />Delete</button>
-      </div>
-    </motion.article>
-  );
-};
-
-PortfolioCard.propTypes = {
-  portfolio: PropTypes.shape({
-    id: PropTypes.string,
-    _id: PropTypes.string,
-    name: PropTypes.string,
-    title: PropTypes.string,
-    layout: PropTypes.string,
-    template: PropTypes.string,
-    slug: PropTypes.string,
-    isPublic: PropTypes.bool,
-    createdAt: PropTypes.string,
-    views: PropTypes.number
-  }).isRequired,
-  copiedId: PropTypes.string,
-  onAnalytics: PropTypes.func.isRequired,
-  onCopy: PropTypes.func.isRequired,
-  onDelete: PropTypes.func.isRequired,
-  onShare: PropTypes.func.isRequired,
-  onToggleVisibility: PropTypes.func.isRequired
-};
-
-const DashboardPage = () => {
-  const reduceMotion = useReducedMotion();
-  const { user, isAuthenticated, isLoading: isAuthLoading } = useAuth();
-  const [portfolios, setPortfolios] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [copiedId, setCopiedId] = useState('');
-  const [deleting, setDeleting] = useState(null);
-  const [sharePortfolio, setSharePortfolio] = useState(null);
-  const [analyticsPortfolio, setAnalyticsPortfolio] = useState(null);
-
-  const totals = useMemo(() => ({
-    views: portfolios.reduce((total, portfolio) => total + Number(portfolio.views || 0), 0),
-    exports: portfolios.reduce((total, portfolio) => total + Number(portfolio.exportCount || portfolio.exports || 0), 0)
-  }), [portfolios]);
+function CountUp({ end = 0, duration = 1.4 }) {
+  const [count, setCount] = useState(0);
 
   useEffect(() => {
-    if (isAuthLoading || !isAuthenticated) return undefined;
+    if (!end) {
+      setCount(0);
+      return undefined;
+    }
+    let frame;
+    let start;
+    const animate = (time) => {
+      start = start || time;
+      const progress = Math.min((time - start) / (duration * 1000), 1);
+      setCount(Math.round(progress * end));
+      if (progress < 1) frame = requestAnimationFrame(animate);
+    };
+    frame = requestAnimationFrame(animate);
+    return () => cancelAnimationFrame(frame);
+  }, [duration, end]);
+
+  return <span>{count.toLocaleString()}</span>;
+}
+
+CountUp.propTypes = {
+  duration: PropTypes.number,
+  end: PropTypes.number
+};
+
+function UsageBar({ label, icon: Icon, used, limit, unlimited = false }) {
+  const percent = unlimited ? 100 : Math.min((used / Math.max(limit, 1)) * 100, 100);
+  return (
+    <div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', marginBottom: '9px' }}>
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '7px', fontSize: '13px', color: 'rgba(255,255,255,0.64)' }}>
+          <Icon size={14} color="#a855f7" />
+          {label}
+        </span>
+        <span style={{ fontSize: '13px', fontWeight: 700, color: '#fff' }}>
+          {unlimited ? 'Unlimited' : `${used}/${limit}`}
+        </span>
+      </div>
+      <div style={{ height: '5px', borderRadius: '999px', background: 'rgba(255,255,255,0.06)', overflow: 'hidden' }}>
+        <motion.div
+          initial={{ width: 0 }}
+          animate={{ width: `${percent}%` }}
+          transition={{ duration: 0.9, ease: [0.22, 1, 0.36, 1] }}
+          style={{
+            height: '100%',
+            borderRadius: '999px',
+            background: !unlimited && used >= limit
+              ? 'linear-gradient(90deg, #ef4444, #f59e0b)'
+              : 'linear-gradient(90deg, #a855f7, #3b82f6, #14b8a6)'
+          }}
+        />
+      </div>
+    </div>
+  );
+}
+
+UsageBar.propTypes = {
+  icon: PropTypes.elementType.isRequired,
+  label: PropTypes.string.isRequired,
+  limit: PropTypes.number.isRequired,
+  unlimited: PropTypes.bool,
+  used: PropTypes.number.isRequired
+};
+
+function SkeletonCard() {
+  return (
+    <motion.div
+      animate={{ opacity: [0.4, 0.72, 0.4] }}
+      transition={{ duration: 1.4, repeat: Infinity, ease: 'easeInOut' }}
+      style={{
+        height: '210px',
+        borderRadius: '16px',
+        background: 'rgba(255,255,255,0.04)',
+        border: '1px solid rgba(255,255,255,0.06)'
+      }}
+    />
+  );
+}
+
+export default function DashboardPage() {
+  const { user, isLoading: authLoading } = useAuth();
+  const planState = usePlan();
+  const navigate = useNavigate();
+  const [portfolios, setPortfolios] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [copiedId, setCopiedId] = useState('');
+  const [confirmDeleteId, setConfirmDeleteId] = useState('');
+  const [deletingId, setDeletingId] = useState('');
+  const [openingPortal, setOpeningPortal] = useState(false);
+
+  const currentPlan = normalizePlan(planState.plan || user?.plan || user?.tier);
+  const isStarter = currentPlan === 'starter';
+  const generationsUsed = Number(user?.generationsUsedThisMonth || 0);
+  const generationLimit = isStarter ? Number(planState.limits?.aiGenerationsPerMonth || 3) : -1;
+  const portfolioLimit = isStarter ? Number(planState.limits?.portfolioLimit || 1) : -1;
+  const totalViews = useMemo(() => portfolios.reduce((sum, item) => sum + Number(item.views || 0), 0), [portfolios]);
+  const totalGenerations = generationsUsed;
+  const initials = (user?.name || 'Lumina User')
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((part) => part[0])
+    .join('')
+    .toUpperCase()
+    .slice(0, 2);
+
+  useEffect(() => {
     let active = true;
-    const load = async () => {
-      setIsLoading(true);
+    const fetchPortfolios = async () => {
       try {
+        setLoading(true);
         const data = await portfolioAPI.getAll();
-        if (active) setPortfolios(data);
+        if (active) setPortfolios(Array.isArray(data) ? data : []);
       } catch (error) {
-        toast.error(error.response?.data?.message || 'Could not load portfolios');
+        toast.error(error.response?.data?.message || 'Failed to load portfolios');
       } finally {
-        if (active) setIsLoading(false);
+        if (active) setLoading(false);
       }
     };
-    load();
+    fetchPortfolios();
     return () => {
       active = false;
     };
-  }, [isAuthenticated, isAuthLoading]);
+  }, []);
 
-  const copyPublicUrl = async (portfolio) => {
-    const id = portfolio.id || portfolio._id;
-    const publicUrl = `${publicBaseUrl}/p/${portfolio.slug}`;
-    await navigator.clipboard.writeText(publicUrl);
-    setCopiedId(id);
-    toast.success('Public URL copied');
-    window.setTimeout(() => setCopiedId(''), 1200);
-  };
-
-  const toggleVisibility = async (portfolio) => {
-    const id = portfolio.id || portfolio._id;
-    try {
-      const result = await portfolioAPI.toggleVisibility(id);
-      const nextValue = result.isPublic ?? result.data?.isPublic;
-      setPortfolios((current) => current.map((item) => (
-        String(item.id || item._id) === String(id) ? { ...item, isPublic: nextValue } : item
-      )));
-      toast.success(result.message || (nextValue ? 'Portfolio is now public' : 'Portfolio is now private'));
-    } catch (error) {
-      toast.error(error.response?.data?.message || 'Could not update visibility');
+  const handleCopyLink = async (portfolio) => {
+    if (!portfolio.slug) {
+      toast.error('Save this portfolio before sharing it');
+      return;
     }
+    const url = `${publicBaseUrl}/p/${portfolio.slug}`;
+    await navigator.clipboard.writeText(url);
+    setCopiedId(portfolio._id || portfolio.id);
+    window.setTimeout(() => setCopiedId(''), 1600);
+    toast.success('Link copied');
   };
 
-  const confirmDelete = async () => {
-    if (!deleting) return;
-    const id = deleting.id || deleting._id;
+  const handleDelete = async (portfolio) => {
+    const id = portfolio._id || portfolio.id;
     try {
+      setDeletingId(id);
       await portfolioAPI.delete(id);
-      setPortfolios((current) => current.filter((portfolio) => String(portfolio.id || portfolio._id) !== String(id)));
+      setPortfolios((current) => current.filter((item) => String(item._id || item.id) !== String(id)));
+      setConfirmDeleteId('');
       toast.success('Portfolio deleted');
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Could not delete portfolio');
+      toast.error(error.response?.data?.message || 'Failed to delete portfolio');
     } finally {
-      setDeleting(null);
+      setDeletingId('');
     }
   };
 
+  const openBillingPortal = async () => {
+    if (isStarter) {
+      navigate('/pricing');
+      return;
+    }
+    try {
+      setOpeningPortal(true);
+      const response = await billingAPI.portal();
+      window.location.assign(response.url);
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Could not open billing portal');
+    } finally {
+      setOpeningPortal(false);
+    }
+  };
+
+  if (authLoading) return <LoadingScreen message="Opening your dashboard" />;
+
+  const containerVariants = {
+    hidden: {},
+    visible: { transition: { staggerChildren: 0.08 } }
+  };
+
+  const itemVariants = {
+    hidden: { opacity: 0, y: 16 },
+    visible: { opacity: 1, y: 0, transition: { duration: 0.4, ease: [0.22, 1, 0.36, 1] } }
+  };
+
+  const periodEnd = formatDate(planState.currentPeriodEnd);
+  const visibleStatus = planState.subscriptionStatus && planState.subscriptionStatus !== 'none'
+    ? planState.subscriptionStatus.replace('_', ' ')
+    : '';
+
   return (
-    <main className="min-h-screen bg-[#0a0a0f] px-4 py-28 text-white">
-      <AnimatedBackground />
-      <Navbar compact />
-      {isAuthLoading ? (
-        <div className="mx-auto max-w-3xl">
-          <LoadingScreen message="Opening your dashboard" detail="Checking your secure Lumina session." />
-        </div>
-      ) : null}
-      <motion.div
-        initial={reduceMotion ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={reduceMotion ? { duration: 0 } : { duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
-        className="mx-auto max-w-6xl"
-      >
-        <section className="mb-8 flex flex-col gap-5 rounded-2xl border border-white/[0.08] bg-[rgba(255,255,255,0.05)] p-5 backdrop-blur-xl sm:flex-row sm:items-center sm:justify-between sm:p-6">
-          <div className="flex items-center gap-4">
-            <img className="h-16 w-16 rounded-full border border-white/[0.12] object-cover" src={user?.avatar} alt={`${user?.name} avatar`} width="64" height="64" loading="lazy" />
-            <div>
-              <p className="text-sm font-bold text-[#c4b5fd]">Welcome back</p>
-              <h1 className="text-3xl font-black text-white sm:text-4xl">{user?.name}</h1>
-              <div className="mt-3 flex flex-wrap items-center gap-2">
-                <TierBadge
-                  plan={user?.plan}
-                  subscriptionStatus={user?.subscriptionStatus}
-                  trialEndsAt={user?.trialEndsAt}
-                  inGracePeriod={user?.inGracePeriod}
-                  gracePeriodEndsAt={user?.gracePeriodEndsAt}
-                />
-                {user?.plan === 'starter' && <span className="text-sm text-white/50">Generations this month: {user?.generationsUsedThisMonth || 0}/3</span>}
+    <main className="lumina-page" style={{ padding: '104px 24px 80px' }}>
+      <Navbar />
+      <div style={{ maxWidth: '1100px', margin: '0 auto', position: 'relative', zIndex: 2 }}>
+        <motion.div variants={containerVariants} initial="hidden" animate="visible" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          <motion.section variants={itemVariants}>
+            <Card hover={false} padding="20px 24px" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px', flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '14px', minWidth: 0 }}>
+                <div
+                  style={{
+                    width: '48px',
+                    height: '48px',
+                    borderRadius: '50%',
+                    background: 'linear-gradient(135deg, #a855f7, #3b82f6)',
+                    display: 'grid',
+                    placeItems: 'center',
+                    fontSize: '16px',
+                    fontWeight: 800,
+                    color: '#fff',
+                    boxShadow: '0 0 22px rgba(168,85,247,0.34)',
+                    overflow: 'hidden',
+                    flexShrink: 0
+                  }}
+                >
+                  {user?.avatar ? <img src={user.avatar} alt="" width="48" height="48" loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : initials}
+                </div>
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginBottom: '4px' }}>
+                    <h1 style={{ fontSize: '20px', fontWeight: 750, color: '#fff', lineHeight: 1.2 }}>{user?.name}</h1>
+                    <TierBadge
+                      plan={currentPlan}
+                      subscriptionStatus={planState.subscriptionStatus}
+                      isOnTrial={planState.isTrialing}
+                      trialEndsAt={planState.trialEndsAt}
+                      inGracePeriod={planState.inGracePeriod}
+                      gracePeriodEndsAt={planState.gracePeriodEndsAt}
+                      size="sm"
+                    />
+                  </div>
+                  <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.42)' }}>{user?.email}</p>
+                </div>
+              </div>
+              <Button onClick={() => navigate('/build')} leftIcon={<Plus size={16} />}>
+                New Portfolio
+              </Button>
+            </Card>
+          </motion.section>
+
+          <motion.section variants={itemVariants}>
+            <Card hover={false} padding="20px 24px">
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '16px', marginBottom: '16px', flexWrap: 'wrap' }}>
+                <div>
+                  <p style={{ fontSize: '11px', color: 'rgba(255,255,255,0.34)', textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 800 }}>
+                    {isStarter ? 'Starter usage' : 'Plan capacity'}
+                  </p>
+                  <p style={{ marginTop: '5px', color: 'rgba(255,255,255,0.56)', fontSize: '13px' }}>
+                    {isStarter ? 'Your free limits, kept visible and calm.' : 'Unlimited creation is active on your workspace.'}
+                  </p>
+                </div>
+                <Link to="/pricing" style={{ color: '#c084fc', fontSize: '13px', fontWeight: 700 }}>
+                  {isStarter ? 'Upgrade for unlimited' : 'Compare plans'}
+                </Link>
+              </div>
+              <div className="lumina-grid-2" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '16px' }}>
+                <UsageBar label="AI Generations" icon={Sparkles} used={generationsUsed} limit={generationLimit > 0 ? generationLimit : 3} unlimited={!isStarter} />
+                <UsageBar label="Portfolios" icon={Globe} used={portfolios.length} limit={portfolioLimit > 0 ? portfolioLimit : 1} unlimited={!isStarter} />
+              </div>
+              {isStarter && user?.generationsResetAt ? (
+                <p style={{ marginTop: '14px', fontSize: '12px', color: 'rgba(255,255,255,0.32)' }}>
+                  Resets {formatDate(user.generationsResetAt) || 'soon'}
+                </p>
+              ) : null}
+            </Card>
+          </motion.section>
+
+          <motion.section variants={itemVariants} className="lumina-grid-3" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '12px' }}>
+            {[
+              { label: 'Saved Portfolios', value: portfolios.length, icon: Globe, color: '#a855f7' },
+              { label: 'Total Views', value: totalViews, icon: Eye, color: '#3b82f6' },
+              { label: 'AI Generations Used', value: totalGenerations, icon: Zap, color: '#ec4899' }
+            ].map((stat) => (
+              <Card key={stat.label} padding="20px" glow>
+                <div
+                  style={{
+                    width: '38px',
+                    height: '38px',
+                    borderRadius: '12px',
+                    background: `${stat.color}18`,
+                    border: `1px solid ${stat.color}30`,
+                    display: 'grid',
+                    placeItems: 'center',
+                    marginBottom: '13px'
+                  }}
+                >
+                  <stat.icon size={17} color={stat.color} />
+                </div>
+                <p style={{ fontSize: '30px', fontWeight: 800, color: '#fff', lineHeight: 1, marginBottom: '5px' }}>
+                  <CountUp end={stat.value} />
+                </p>
+                <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.42)', fontWeight: 600 }}>{stat.label}</p>
+                {stat.value === 0 ? <p style={{ marginTop: '7px', fontSize: '12px', color: 'rgba(255,255,255,0.24)' }}>No data yet</p> : null}
+              </Card>
+            ))}
+          </motion.section>
+
+          <motion.section variants={itemVariants}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', marginBottom: '16px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <h2 style={{ fontSize: '16px', fontWeight: 750, color: '#fff' }}>Your Portfolios</h2>
+                {portfolios.length ? (
+                  <span style={{ background: 'rgba(168,85,247,0.12)', border: '1px solid rgba(168,85,247,0.22)', borderRadius: '999px', padding: '2px 8px', fontSize: '12px', fontWeight: 700, color: '#c084fc' }}>
+                    {portfolios.length}
+                  </span>
+                ) : null}
               </div>
             </div>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <Link to="/dashboard/billing" className="rounded-full border border-white/[0.08] px-5 py-3 font-bold text-white hover:bg-white/[0.06]">Billing</Link>
-            {user?.plan === 'starter' && <Link to="/pricing" className="rounded-full border border-white/[0.08] px-5 py-3 font-bold text-white hover:bg-white/[0.06]">Upgrade Plan</Link>}
-            <Link to="/build" className="btn-primary inline-flex items-center justify-center gap-2 rounded-full px-5 py-3 font-bold"><Plus className="h-4 w-4" />New portfolio</Link>
-          </div>
-        </section>
 
-        <div className="mb-8">
-          <BillingDashboard />
-        </div>
+            {loading ? (
+              <div className="lumina-grid-2" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '12px' }}>
+                <SkeletonCard />
+                <SkeletonCard />
+              </div>
+            ) : portfolios.length === 0 ? (
+              <Card hover={false} padding="60px 24px" style={{ textAlign: 'center', borderStyle: 'dashed' }}>
+                <motion.div
+                  animate={{ scale: [1, 1.05, 1] }}
+                  transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
+                  style={{
+                    width: '64px',
+                    height: '64px',
+                    borderRadius: '18px',
+                    background: 'rgba(168,85,247,0.1)',
+                    border: '1px solid rgba(168,85,247,0.22)',
+                    display: 'grid',
+                    placeItems: 'center',
+                    margin: '0 auto 20px'
+                  }}
+                >
+                  <Sparkles size={28} color="#a855f7" />
+                </motion.div>
+                <h3 style={{ fontSize: '18px', fontWeight: 750, color: '#fff', marginBottom: '8px' }}>No portfolios yet</h3>
+                <p style={{ fontSize: '14px', color: 'rgba(255,255,255,0.44)', margin: '0 auto 24px', maxWidth: '340px' }}>
+                  Build your first AI-powered portfolio in minutes. Your work, beautifully presented.
+                </p>
+                <Button onClick={() => navigate('/build')}>Build your first portfolio</Button>
+              </Card>
+            ) : (
+              <div className="lumina-grid-2" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '12px' }}>
+                <AnimatePresence>
+                  {portfolios.map((portfolio, index) => {
+                    const id = portfolio._id || portfolio.id;
+                    const template = portfolio.templateId || portfolio.layout || portfolio.template || 'glass';
+                    return (
+                      <motion.article
+                        key={id}
+                        initial={{ opacity: 0, y: 16 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, scale: 0.95 }}
+                        transition={{ delay: index * 0.04, duration: 0.25 }}
+                        whileHover={{ y: -4, boxShadow: '0 8px 32px rgba(0,0,0,0.4), 0 0 36px rgba(168,85,247,0.12)' }}
+                        style={{
+                          background: 'rgba(255,255,255,0.03)',
+                          backdropFilter: 'blur(24px)',
+                          border: '1px solid rgba(255,255,255,0.07)',
+                          borderRadius: '16px',
+                          overflow: 'hidden'
+                        }}
+                      >
+                        <div style={{ height: '5px', background: 'linear-gradient(90deg, #a855f7, #3b82f6, #ec4899)' }} />
+                        <div style={{ padding: '16px' }}>
+                          <div style={{ marginBottom: '12px' }}>
+                            <h3 style={{ fontSize: '15px', fontWeight: 750, color: '#fff', marginBottom: '3px' }}>{portfolio.name}</h3>
+                            <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.46)' }}>{portfolio.title}</p>
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                            <span style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '999px', padding: '2px 8px', fontSize: '11px', fontWeight: 650, color: 'rgba(255,255,255,0.54)', textTransform: 'capitalize' }}>{template}</span>
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '12px', color: 'rgba(255,255,255,0.36)' }}><Eye size={11} />{portfolio.views || 0} views</span>
+                            <span style={{ fontSize: '12px', color: 'rgba(255,255,255,0.27)' }}>{formatDate(portfolio.createdAt) || 'Recently'}</span>
+                          </div>
+                          <AnimatePresence>
+                            {confirmDeleteId === id && (
+                              <motion.div
+                                initial={{ opacity: 0, height: 0 }}
+                                animate={{ opacity: 1, height: 'auto' }}
+                                exit={{ opacity: 0, height: 0 }}
+                                style={{ overflow: 'hidden' }}
+                              >
+                                <div style={{ marginTop: '12px', padding: '10px 12px', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', flexWrap: 'wrap' }}>
+                                  <span style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: 'rgba(255,255,255,0.72)' }}><AlertTriangle size={12} color="#ef4444" />Delete this portfolio?</span>
+                                  <span style={{ display: 'flex', gap: '6px' }}>
+                                    <Button size="sm" variant="secondary" onClick={() => setConfirmDeleteId('')}>Cancel</Button>
+                                    <Button size="sm" variant="danger" loading={deletingId === id} onClick={() => handleDelete(portfolio)}>Delete</Button>
+                                  </span>
+                                </div>
+                              </motion.div>
+                            )}
+                          </AnimatePresence>
+                        </div>
+                        <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)', padding: '10px 16px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          {[
+                            { icon: copiedId === id ? Check : Copy, onClick: () => handleCopyLink(portfolio), color: copiedId === id ? '#22c55e' : 'rgba(255,255,255,0.56)', title: 'Copy link' },
+                            { icon: ExternalLink, onClick: () => portfolio.slug && window.open(`/p/${portfolio.slug}`, '_blank'), color: 'rgba(255,255,255,0.56)', title: 'View live' },
+                            { icon: Edit3, onClick: () => navigate(`/build?id=${id}`, { state: { portfolio } }), color: 'rgba(255,255,255,0.56)', title: 'Edit' },
+                            { icon: Trash2, onClick: () => setConfirmDeleteId(id), color: '#f87171', title: 'Delete' }
+                          ].map((action) => (
+                            <motion.button
+                              key={action.title}
+                              type="button"
+                              title={action.title}
+                              onClick={action.onClick}
+                              whileHover={{ background: 'rgba(255,255,255,0.08)', scale: 1.05 }}
+                              whileTap={{ scale: 0.95 }}
+                              style={{
+                                background: 'rgba(255,255,255,0.04)',
+                                border: '1px solid rgba(255,255,255,0.06)',
+                                borderRadius: '8px',
+                                color: action.color,
+                                cursor: 'pointer',
+                                padding: '7px',
+                                display: 'grid',
+                                placeItems: 'center'
+                              }}
+                            >
+                              <action.icon size={13} />
+                            </motion.button>
+                          ))}
+                        </div>
+                      </motion.article>
+                    );
+                  })}
+                </AnimatePresence>
+              </div>
+            )}
+          </motion.section>
 
-        {user?.plan === 'starter' && (
-          <div className="mb-8">
-            <UsageMeter
-              generationsUsed={user?.generationsUsedThisMonth || 0}
-              generationsLimit={3}
-              portfolioCount={portfolios.length}
-              portfolioLimit={1}
-              resetsAt={user?.generationsResetAt}
-            />
-          </div>
-        )}
-
-        <section className="mb-8 grid gap-4 sm:grid-cols-3">
-          {[
-            ['Saved portfolios', portfolios.length],
-            ['Portfolio views', totals.views],
-            ['HTML exports', totals.exports]
-          ].map(([label, value]) => (
-            <div key={label} className="rounded-2xl border border-white/[0.08] bg-[rgba(255,255,255,0.05)] p-5 backdrop-blur-xl">
-              <p className="text-sm text-white/50">{label}</p>
-              <p className="mt-2 text-3xl font-black text-white">{value}</p>
-            </div>
-          ))}
-        </section>
-
-        {isLoading ? (
-          <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
-            <SkeletonCard />
-            <SkeletonCard />
-            <SkeletonCard />
-          </div>
-        ) : portfolios.length === 0 ? (
-          <div className="rounded-2xl border border-white/[0.08] bg-[rgba(255,255,255,0.05)] p-10 text-center backdrop-blur-xl">
-            <div className="mx-auto grid h-24 w-24 place-items-center rounded-[2rem] border border-white/[0.08] bg-[#a855f7]/15">
-              <Sparkles className="h-9 w-9 text-[#c4b5fd]" />
-            </div>
-            <h2 className="mt-6 text-2xl font-black text-white">No portfolios yet</h2>
-            <p className="mx-auto mt-3 max-w-xl text-white/50">Create your first portfolio, generate the direction, and your saved work will appear here with views, exports, and share links.</p>
-            <Link to="/build" className="btn-primary mt-6 inline-flex rounded-full px-5 py-3 font-bold">Build your first portfolio</Link>
-          </div>
-        ) : (
-          <motion.div layout={!reduceMotion} className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
-            <AnimatePresence>
-              {portfolios.map((portfolio) => (
-                <PortfolioCard
-                  key={portfolio.id || portfolio._id}
-                  portfolio={portfolio}
-                  copiedId={copiedId}
-                  onAnalytics={setAnalyticsPortfolio}
-                  onCopy={copyPublicUrl}
-                  onDelete={setDeleting}
-                  onShare={setSharePortfolio}
-                  onToggleVisibility={toggleVisibility}
-                />
-              ))}
-            </AnimatePresence>
-          </motion.div>
-        )}
-      </motion.div>
-      <AnimatePresence>
-        {deleting && <DeleteModal portfolio={deleting} onCancel={() => setDeleting(null)} onConfirm={confirmDelete} />}
-      </AnimatePresence>
-      <ShareModal
-        isOpen={Boolean(sharePortfolio)}
-        onClose={() => setSharePortfolio(null)}
-        portfolio={sharePortfolio}
-        publicUrl={sharePortfolio?.slug ? `${publicBaseUrl}/p/${sharePortfolio.slug}` : publicBaseUrl}
-      />
-      <AnalyticsDrawer
-        isOpen={Boolean(analyticsPortfolio)}
-        onClose={() => setAnalyticsPortfolio(null)}
-        portfolioId={analyticsPortfolio ? String(analyticsPortfolio.id || analyticsPortfolio._id) : ''}
-      />
+          <motion.section variants={itemVariants}>
+            <Card hover={false} padding="20px 24px" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px', flexWrap: 'wrap' }}>
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap', marginBottom: '7px' }}>
+                  <TierBadge plan={currentPlan} size="md" />
+                  <h2 style={{ fontSize: '15px', fontWeight: 750, color: '#fff' }}>
+                    {currentPlan === 'pro' ? 'Pro Plan' : currentPlan === 'studio' ? 'Studio Plan' : 'Starter Plan'}
+                  </h2>
+                  {visibleStatus ? (
+                    <span style={{ borderRadius: '999px', padding: '3px 8px', background: 'rgba(34,197,94,0.12)', color: '#86efac', fontSize: '11px', fontWeight: 800, textTransform: 'capitalize' }}>
+                      {visibleStatus}
+                    </span>
+                  ) : null}
+                </div>
+                <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.42)' }}>
+                  {periodEnd ? `Renews ${periodEnd}` : isStarter ? 'Free plan - no billing' : '-'}
+                </p>
+              </div>
+              <Button
+                variant={isStarter ? 'primary' : 'secondary'}
+                loading={openingPortal}
+                onClick={openBillingPortal}
+                leftIcon={isStarter ? <Sparkles size={15} /> : <BarChart2 size={15} />}
+              >
+                {isStarter ? 'Upgrade to Pro' : 'Manage Billing'}
+              </Button>
+            </Card>
+          </motion.section>
+        </motion.div>
+      </div>
     </main>
   );
-};
-
-export default DashboardPage;
+}

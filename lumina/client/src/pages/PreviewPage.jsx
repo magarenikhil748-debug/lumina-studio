@@ -3,24 +3,39 @@ import confetti from 'canvas-confetti';
 import { Link, useLocation } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
-import { BarChart3, Check, Code2, Copy, Download, ExternalLink, FileJson, Linkedin, Monitor, RefreshCw, Save, Smartphone, Tablet, Twitter, WandSparkles } from 'lucide-react';
-import AnimatedBackground from '../components/AnimatedBackground';
+import {
+  Check,
+  Code2,
+  Copy,
+  Download,
+  ExternalLink,
+  FileJson,
+  Laptop,
+  Lock,
+  Palette,
+  RefreshCw,
+  Save,
+  Smartphone,
+  Tablet
+} from 'lucide-react';
 import AuthPromptModal from '../components/AuthPromptModal';
 import Navbar from '../components/Navbar';
 import TemplatePicker from '../components/TemplatePicker';
+import Button from '../components/ui/Button';
+import Card from '../components/ui/Card';
+import SectionLabel from '../components/ui/SectionLabel';
 import { useAuth } from '../context/AuthContext';
 import { useGemini } from '../hooks/useGemini';
+import usePlan from '../hooks/usePlan';
 import { usePortfolio } from '../hooks/usePortfolio';
 import TemplateRenderer from '../templates/TemplateRenderer';
 import { resolveTemplateId } from '../templates/shared/templateData';
-import { buildStandaloneHtml, calculateQuality, palettes, plans, samplePortfolio } from '../utils/helpers';
+import { buildStandaloneHtml, calculateQuality, palettes, samplePortfolio } from '../utils/helpers';
 import { trackPortfolioExport } from '../utils/api';
 import { getPublicBaseUrl } from '../utils/publicUrl';
 
 const widths = { mobile: 375, tablet: 768, desktop: 1120 };
 const publicBaseUrl = getPublicBaseUrl();
-
-const openShareWindow = (url) => window.open(url, '_blank', 'width=600,height=400');
 
 const normalizeInitialPortfolio = (portfolio) => ({
   ...portfolio,
@@ -28,11 +43,12 @@ const normalizeInitialPortfolio = (portfolio) => ({
   template: resolveTemplateId(portfolio, portfolio.templateId)
 });
 
-const PreviewPage = () => {
+export default function PreviewPage() {
   const reduceMotion = useReducedMotion();
   const { state } = useLocation();
   const base = state?.portfolio || samplePortfolio;
   const { isAuthenticated } = useAuth();
+  const planState = usePlan();
   const { save, isSaving } = usePortfolio();
   const { generate, isGenerating } = useGemini();
   const [portfolio, setPortfolio] = useState(() => normalizeInitialPortfolio(base));
@@ -40,8 +56,12 @@ const PreviewPage = () => {
   const [showConfetti, setShowConfetti] = useState(false);
   const [showAuthPrompt, setShowAuthPrompt] = useState(false);
   const [livePortfolio, setLivePortfolio] = useState(null);
+  const [expandedScore, setExpandedScore] = useState(false);
+  const [regeneratingField, setRegeneratingField] = useState('');
   const quality = useMemo(() => calculateQuality(portfolio), [portfolio]);
-  const activePlan = plans[portfolio.plan || 'free'];
+  const currentTemplate = resolveTemplateId(portfolio, portfolio.templateId);
+  const canPdfExport = planState.canAccess?.('pdfExport');
+  const previewWidth = device === 'desktop' ? 'min(100%, 1120px)' : `${widths[device]}px`;
 
   const updatePortfolio = (patch) => setPortfolio((current) => ({ ...current, ...patch }));
 
@@ -68,60 +88,63 @@ const PreviewPage = () => {
     toast.success('Portfolio JSON copied');
   };
 
+  const downloadPdf = () => {
+    if (!canPdfExport) {
+      toast.error('PDF export is a Pro feature');
+      return;
+    }
+    window.print();
+  };
+
   const saveCurrent = async () => {
     if (!isAuthenticated) {
       setShowAuthPrompt(true);
       return;
     }
-    const saved = await save({ ...portfolio, templateId: resolveTemplateId(portfolio, portfolio.templateId), qualityScore: quality.score });
+    const saved = await save({ ...portfolio, templateId: currentTemplate, template: currentTemplate, qualityScore: quality.score });
     if (saved) {
-      setPortfolio(saved);
+      setPortfolio(normalizeInitialPortfolio(saved));
       setLivePortfolio(saved);
       setShowConfetti(true);
-      confetti({
-        particleCount: 150,
-        spread: 70,
-        colors: ['#a855f7', '#3b82f6', '#ec4899']
-      });
+      confetti({ particleCount: 140, spread: 70, colors: ['#a855f7', '#3b82f6', '#ec4899'] });
       window.setTimeout(() => setShowConfetti(false), 1400);
     }
   };
 
-  const liveUrl = livePortfolio?.slug ? `${publicBaseUrl}/p/${livePortfolio.slug}` : '';
-  const copyLiveUrl = async () => {
-    if (!liveUrl) return;
-    await navigator.clipboard.writeText(liveUrl);
-    toast.success('Live portfolio URL copied');
+  const regenerate = async (field) => {
+    try {
+      setRegeneratingField(field);
+      const result = await generate({ ...portfolio, regenerate: field });
+      if (!result) return;
+      const patch = {
+        bioVersions: [result.bio?.version1, result.bio?.version2, result.bio?.version3].filter(Boolean),
+        selectedBio: result.bio?.version1 || portfolio.selectedBio,
+        tagline: result.tagline || portfolio.tagline,
+        projects: (portfolio.projects || []).map((project, index) => ({ ...project, description: result.projectDescriptions?.[index] || project.description })),
+        layout: result.layoutSuggestion || portfolio.layout,
+        templateId: currentTemplate,
+        template: currentTemplate,
+        colorPalette: result.colorPalette || portfolio.colorPalette,
+        skillsHeadline: result.skillsHeadline,
+        generationMetadata: result.metadata
+      };
+      updatePortfolio(field === 'palette' ? { colorPalette: patch.colorPalette } : field === 'tagline' ? { tagline: patch.tagline } : field === 'projects' ? { projects: patch.projects } : patch);
+    } finally {
+      setRegeneratingField('');
+    }
   };
 
-  const regenerate = async (field) => {
-    const result = await generate({ ...portfolio, regenerate: field });
-    if (!result) return;
-    const patch = {
-      bioVersions: [result.bio.version1, result.bio.version2, result.bio.version3].filter(Boolean),
-      selectedBio: result.bio.version1,
-      tagline: result.tagline,
-      projects: portfolio.projects.map((project, index) => ({ ...project, description: result.projectDescriptions?.[index] || project.description })),
-      layout: result.layoutSuggestion || portfolio.layout,
-      templateId: portfolio.templateId || 'glass',
-      template: portfolio.templateId || portfolio.template || 'glass',
-      colorPalette: result.colorPalette || portfolio.colorPalette,
-      skillsHeadline: result.skillsHeadline,
-      generationMetadata: result.metadata
-    };
-    updatePortfolio(field === 'palette' ? { colorPalette: patch.colorPalette } : field === 'tagline' ? { tagline: patch.tagline } : field === 'projects' ? { projects: patch.projects } : patch);
-  };
+  const liveUrl = livePortfolio?.slug ? `${publicBaseUrl}/p/${livePortfolio.slug}` : '';
 
   return (
-    <main className="min-h-screen bg-[#0a0a0f] px-4 py-28 text-white">
-      <AnimatedBackground />
-      <Navbar compact />
+    <main className="lumina-page" style={{ paddingTop: '64px' }}>
+      <Navbar />
       <AnimatePresence>
         {showAuthPrompt && !isAuthenticated && (
           <AuthPromptModal
             onClose={() => setShowAuthPrompt(false)}
             title="Sign in to save your portfolio"
-            copy="Your preview is ready. Sign in to save it to MongoDB, get a public slug, and track views from your dashboard."
+            copy="Your preview is ready. Sign in to save it, get a public slug, and track views from your dashboard."
           />
         )}
       </AnimatePresence>
@@ -132,143 +155,296 @@ const PreviewPage = () => {
           transition={reduceMotion ? { duration: 0 } : { duration: 1.4, ease: 'easeOut' }}
         />
       )}
-      <motion.div
-        initial={reduceMotion ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: true }}
-        transition={reduceMotion ? { duration: 0 } : { duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
-        className="mx-auto max-w-7xl"
+
+      <section
+        style={{
+          position: 'sticky',
+          top: '64px',
+          zIndex: 30,
+          height: '56px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: '12px',
+          padding: '0 20px',
+          background: 'rgba(7,7,15,0.72)',
+          backdropFilter: 'blur(20px)',
+          borderBottom: '1px solid rgba(255,255,255,0.06)'
+        }}
       >
-        <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-          <div>
-            <p className="text-sm font-bold text-[#c084fc]">Preview studio</p>
-            <h1 className="gradient-text mt-2 font-display text-5xl font-black">Tune, export, and share.</h1>
-            <p className="mt-2 text-white/50">Quality score: <span className="font-bold text-[#c084fc]">{quality.score}/100</span>. {quality.suggestions[0] || 'Ready for a confident launch.'}</p>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <motion.button whileHover={reduceMotion ? undefined : { scale: 1.05 }} whileTap={reduceMotion ? undefined : { scale: 0.97 }} onClick={copyCode} className="btn-primary rounded-full px-4 py-3 font-bold"><Copy className="mr-2 inline h-4 w-4" />Copy HTML</motion.button>
-            <motion.button whileHover={reduceMotion ? undefined : { scale: 1.05 }} whileTap={reduceMotion ? undefined : { scale: 0.97 }} onClick={downloadHtml} className="rounded-full border border-white/[0.08] px-4 py-3 font-bold text-white"><Download className="mr-2 inline h-4 w-4" />Download</motion.button>
-            <motion.button whileHover={reduceMotion ? undefined : { scale: 1.05 }} whileTap={reduceMotion ? undefined : { scale: 0.97 }} onClick={copyJson} className="rounded-full border border-white/[0.08] px-4 py-3 font-bold text-white"><FileJson className="mr-2 inline h-4 w-4" />Copy JSON</motion.button>
-            <motion.button whileHover={reduceMotion ? undefined : { scale: 1.05 }} whileTap={reduceMotion ? undefined : { scale: 0.97 }} onClick={saveCurrent} disabled={isSaving} className="btn-primary rounded-full px-4 py-3 font-bold disabled:opacity-50"><Save className="mr-2 inline h-4 w-4" />Save to MongoDB</motion.button>
-          </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
+          <strong style={{ color: '#fff', fontSize: '14px' }}>Preview Studio</strong>
+          <span style={{ borderRadius: '999px', padding: '4px 9px', background: 'rgba(168,85,247,0.12)', border: '1px solid rgba(168,85,247,0.24)', color: '#c084fc', fontSize: '12px', fontWeight: 750 }}>
+            {quality.score}/100
+          </span>
         </div>
+        <div className="lumina-hide-mobile" style={{ display: 'flex', gap: '8px' }}>
+          <Button variant="secondary" size="sm" onClick={copyCode} leftIcon={<Copy size={13} />}>Copy HTML</Button>
+          <Button variant="secondary" size="sm" onClick={downloadHtml} leftIcon={<Download size={13} />}>Download</Button>
+          <Button size="sm" onClick={saveCurrent} loading={isSaving} leftIcon={<Save size={13} />}>Save</Button>
+        </div>
+      </section>
 
-        {livePortfolio && (
-          <motion.section
-            initial={reduceMotion ? { opacity: 1, y: 0 } : { opacity: 0, y: 18 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="mb-6 rounded-2xl border border-[#a855f7]/30 bg-[#a855f7]/12 p-5 shadow-[0_0_40px_rgba(168,85,247,0.18)] backdrop-blur-xl"
+      {livePortfolio && (
+        <motion.section
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          style={{
+            position: 'relative',
+            zIndex: 2,
+            margin: '18px auto 0',
+            maxWidth: '1180px',
+            padding: '0 20px'
+          }}
+        >
+          <Card hover={false} padding="16px 18px" style={{ borderColor: 'rgba(168,85,247,0.28)', background: 'rgba(168,85,247,0.1)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
+              <div>
+                <p style={{ fontSize: '12px', fontWeight: 800, color: '#c084fc' }}>Portfolio live</p>
+                <a href={liveUrl} target="_blank" rel="noreferrer" style={{ color: '#fff', fontWeight: 750, wordBreak: 'break-all' }}>{liveUrl}</a>
+              </div>
+              <Button variant="secondary" size="sm" onClick={() => navigator.clipboard.writeText(liveUrl)} leftIcon={<Copy size={13} />}>Copy URL</Button>
+            </div>
+          </Card>
+        </motion.section>
+      )}
+
+      <div className="preview-layout" style={{ position: 'relative', zIndex: 2 }}>
+        <aside
+          className="quiet-scrollbar"
+          style={{
+            position: 'sticky',
+            top: '120px',
+            alignSelf: 'start',
+            height: 'calc(100vh - 120px)',
+            overflowY: 'auto',
+            padding: '20px',
+            background: 'rgba(7,7,15,0.76)',
+            backdropFilter: 'blur(24px)',
+            borderRight: '1px solid rgba(255,255,255,0.06)'
+          }}
+        >
+          <div style={{ display: 'grid', gap: '16px' }}>
+            <Card hover={false} padding="16px">
+              <button
+                type="button"
+                onClick={() => setExpandedScore((open) => !open)}
+                style={{ width: '100%', background: 'transparent', border: 'none', color: '#fff', textAlign: 'left', cursor: 'pointer' }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '9px' }}>
+                  <SectionLabel>Quality Score</SectionLabel>
+                  <strong style={{ color: '#c084fc', fontSize: '18px' }}>{quality.score}/100</strong>
+                </div>
+                <div style={{ height: '5px', borderRadius: '999px', background: 'rgba(255,255,255,0.06)', overflow: 'hidden' }}>
+                  <motion.div
+                    initial={{ width: 0 }}
+                    animate={{ width: `${quality.score}%` }}
+                    transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
+                    style={{ height: '100%', background: 'linear-gradient(90deg, #a855f7, #3b82f6)', borderRadius: '999px' }}
+                  />
+                </div>
+                <p style={{ marginTop: '10px', fontSize: '12px', color: 'rgba(255,255,255,0.38)' }}>
+                  {quality.suggestions[0] || 'Everything important is covered.'}
+                </p>
+              </button>
+              <AnimatePresence>
+                {expandedScore && (
+                  <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} style={{ overflow: 'hidden' }}>
+                    <div style={{ display: 'grid', gap: '8px', marginTop: '14px', paddingTop: '14px', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+                      {[
+                        ['Bio', Boolean(portfolio.selectedBio || portfolio.bioNotes)],
+                        ['Projects', (portfolio.projects || []).length >= 2],
+                        ['Skills', (portfolio.skills || []).length >= 5],
+                        ['Contact', Boolean(portfolio.email || portfolio.linkedin || portfolio.github)]
+                      ].map(([label, ok]) => (
+                        <span key={label} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: 'rgba(255,255,255,0.55)' }}>
+                          {label}
+                          {ok ? <Check size={13} color="#22c55e" /> : <span style={{ color: '#f59e0b' }}>Improve</span>}
+                        </span>
+                      ))}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </Card>
+
+            <Card hover={false} padding="16px">
+              <div style={{ marginBottom: '12px' }}>
+                <SectionLabel>Template</SectionLabel>
+              </div>
+              <TemplatePicker
+                compact
+                selectedTemplate={currentTemplate}
+                onSelect={(templateId) => updatePortfolio({ templateId, template: templateId })}
+              />
+            </Card>
+
+            <Card hover={false} padding="16px">
+              <div style={{ marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '7px' }}>
+                <Palette size={13} color="#a855f7" />
+                <SectionLabel>Palette</SectionLabel>
+              </div>
+              <div style={{ display: 'grid', gap: '8px' }}>
+                {palettes.map((item) => {
+                  const selected = portfolio.colorPalette?.name === item.name;
+                  return (
+                    <button
+                      key={item.name}
+                      type="button"
+                      onClick={() => updatePortfolio({ colorPalette: item })}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        gap: '10px',
+                        border: selected ? '1px solid rgba(168,85,247,0.34)' : '1px solid rgba(255,255,255,0.06)',
+                        background: selected ? 'rgba(168,85,247,0.12)' : 'rgba(255,255,255,0.035)',
+                        borderRadius: '12px',
+                        color: '#fff',
+                        padding: '9px 10px',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '9px', fontSize: '13px', color: 'rgba(255,255,255,0.72)' }}>
+                        <span style={{ width: '14px', height: '14px', borderRadius: '50%', background: item.primary, boxShadow: `0 0 14px ${item.primary}66` }} />
+                        {item.name}
+                      </span>
+                      {selected ? <Check size={13} color="#c084fc" /> : null}
+                    </button>
+                  );
+                })}
+              </div>
+            </Card>
+
+            <Card hover={false} padding="16px">
+              <div style={{ marginBottom: '12px' }}><SectionLabel>Device</SectionLabel></div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
+                {[
+                  { id: 'mobile', icon: Smartphone, label: 'Mobile' },
+                  { id: 'tablet', icon: Tablet, label: 'Tablet' },
+                  { id: 'desktop', icon: Laptop, label: 'Desktop' }
+                ].map((item) => (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => setDevice(item.id)}
+                    title={item.label}
+                    style={{
+                      height: '38px',
+                      borderRadius: '12px',
+                      border: device === item.id ? '1px solid rgba(168,85,247,0.42)' : '1px solid rgba(255,255,255,0.07)',
+                      background: device === item.id ? 'rgba(168,85,247,0.16)' : 'rgba(255,255,255,0.04)',
+                      color: device === item.id ? '#c084fc' : 'rgba(255,255,255,0.58)',
+                      display: 'grid',
+                      placeItems: 'center',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    <item.icon size={16} />
+                  </button>
+                ))}
+              </div>
+            </Card>
+
+            <Card hover={false} padding="16px">
+              <div style={{ marginBottom: '12px' }}><SectionLabel>Regenerate</SectionLabel></div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                {['bio', 'tagline', 'projects', 'palette'].map((field) => (
+                  <Button
+                    key={field}
+                    variant="secondary"
+                    size="sm"
+                    loading={isGenerating && regeneratingField === field}
+                    disabled={isGenerating}
+                    onClick={() => regenerate(field)}
+                    leftIcon={<RefreshCw size={12} />}
+                  >
+                    {field}
+                  </Button>
+                ))}
+              </div>
+            </Card>
+
+            <Card hover={false} padding="16px">
+              <div style={{ marginBottom: '12px' }}><SectionLabel>Export</SectionLabel></div>
+              <div style={{ display: 'grid', gap: '9px' }}>
+                <Button variant="secondary" fullWidth onClick={copyCode} leftIcon={<Code2 size={14} />}>Copy HTML</Button>
+                <Button variant="secondary" fullWidth onClick={downloadHtml} leftIcon={<Download size={14} />}>Download HTML</Button>
+                <Button variant={canPdfExport ? 'secondary' : 'outline'} fullWidth onClick={downloadPdf} leftIcon={canPdfExport ? <Download size={14} /> : <Lock size={14} />}>Download PDF</Button>
+                <Button fullWidth loading={isSaving} onClick={saveCurrent} leftIcon={<Save size={14} />}>Save Portfolio</Button>
+                <Button variant="ghost" fullWidth onClick={copyJson} leftIcon={<FileJson size={14} />}>Copy JSON</Button>
+              </div>
+            </Card>
+
+            {portfolio.slug ? (
+              <Card hover={false} padding="16px" style={{ borderColor: 'rgba(168,85,247,0.22)', background: 'rgba(168,85,247,0.1)' }}>
+                <p style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#c084fc', fontWeight: 750, fontSize: '13px' }}><Check size={14} /> Shareable link ready</p>
+                <Link to={`/p/${portfolio.slug}`} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', marginTop: '10px', color: '#fff', fontSize: '13px' }}>
+                  Open public page <ExternalLink size={12} />
+                </Link>
+              </Card>
+            ) : null}
+          </div>
+        </aside>
+
+        <section
+          style={{
+            minWidth: 0,
+            padding: '24px',
+            backgroundImage: 'linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px)',
+            backgroundSize: '32px 32px'
+          }}
+        >
+          <motion.div
+            layout
+            animate={{ width: previewWidth }}
+            transition={{ duration: reduceMotion ? 0 : 0.35, ease: [0.22, 1, 0.36, 1] }}
+            style={{
+              maxWidth: '100%',
+              margin: '0 auto',
+              borderRadius: '22px',
+              border: '1px solid rgba(255,255,255,0.09)',
+              background: 'rgba(255,255,255,0.045)',
+              boxShadow: '0 18px 70px rgba(0,0,0,0.44), 0 0 42px rgba(168,85,247,0.1)',
+              overflow: 'hidden'
+            }}
           >
-            <p className="text-sm font-bold text-[#c4b5fd]">🎉 Portfolio Live!</p>
-            <a href={liveUrl} target="_blank" rel="noreferrer" className="mt-2 block break-all font-display text-3xl font-black text-white hover:text-[#c4b5fd]">
-              {liveUrl}
-            </a>
-            <div className="mt-5 flex flex-wrap gap-2">
-              <button type="button" onClick={() => window.open(`/p/${livePortfolio.slug}`, '_blank')} className="btn-primary inline-flex items-center gap-2 rounded-full px-4 py-3 font-bold">
-                <ExternalLink className="h-4 w-4" aria-hidden="true" /> View Live
-              </button>
-              <button type="button" onClick={() => openShareWindow(`https://linkedin.com/shareArticle?url=${encodeURIComponent(liveUrl)}&title=${encodeURIComponent(`Excited to share my new portfolio built with Lumina AI.\n${liveUrl}`)}`)} className="inline-flex items-center gap-2 rounded-full border border-white/[0.08] px-4 py-3 font-bold text-white hover:bg-white/[0.06]">
-                <Linkedin className="h-4 w-4" aria-hidden="true" /> LinkedIn
-              </button>
-              <button type="button" onClick={() => openShareWindow(`https://twitter.com/intent/tweet?url=${encodeURIComponent(liveUrl)}&text=${encodeURIComponent(`Just built my AI-powered portfolio with @LuminaAI ✨\nCheck it out: ${liveUrl}\n#portfolio #design #builtwithAI`)}`)} className="inline-flex items-center gap-2 rounded-full border border-white/[0.08] px-4 py-3 font-bold text-white hover:bg-white/[0.06]">
-                <Twitter className="h-4 w-4" aria-hidden="true" /> Twitter/X
-              </button>
-              <button type="button" onClick={copyLiveUrl} className="inline-flex items-center gap-2 rounded-full border border-white/[0.08] px-4 py-3 font-bold text-white hover:bg-white/[0.06]">
-                <Copy className="h-4 w-4" aria-hidden="true" /> Copy
-              </button>
-            </div>
-          </motion.section>
-        )}
-
-        <div className="mb-6">
-          <TemplatePicker
-            selectedTemplate={resolveTemplateId(portfolio, portfolio.templateId)}
-            onSelect={(templateId) => updatePortfolio({ templateId, template: templateId })}
-          />
-        </div>
-
-        <div className="grid gap-5 lg:grid-cols-[310px_1fr]">
-          <motion.aside whileHover={reduceMotion ? undefined : { y: -8, boxShadow: '0 0 30px rgba(168,85,247,0.3)' }} transition={{ type: 'spring', stiffness: 320, damping: 26 }} className="h-fit space-y-5 rounded-2xl border border-white/[0.08] bg-[rgba(255,255,255,0.05)] p-5 backdrop-blur-xl">
-            <div className="rounded-2xl border border-white/[0.08] bg-[#0a0a0f]/60 p-4">
-              <div className="mb-3 flex items-center justify-between">
-                <h2 className="font-bold text-white">Plan</h2>
-                <span className="rounded-full bg-white/[0.08] px-3 py-1 text-xs font-bold text-[#c4b5fd]">{activePlan.name}</span>
-              </div>
-              <p className="text-sm leading-6 text-white/50">{activePlan.watermark ? 'Free exports include a tasteful Lumina Studio watermark.' : 'No watermark. Ready for serious sharing.'}</p>
-              {activePlan.watermark && (
-                <button onClick={() => updatePortfolio({ plan: 'pro' })} className="btn-primary mt-4 inline-flex w-full items-center justify-center gap-2 rounded-full px-4 py-3 font-bold">
-                  <WandSparkles className="h-4 w-4" /> Upgrade to Pro preview
-                </button>
-              )}
-            </div>
-
-            <div>
-              <h2 className="mb-3 font-bold text-white">Palette</h2>
-              <div className="grid gap-2">
-                {palettes.map((item) => <button key={item.name} onClick={() => updatePortfolio({ colorPalette: item })} className="flex items-center gap-3 rounded-full bg-[rgba(255,255,255,0.05)] px-3 py-2 text-white/80"><span className="h-5 w-5 rounded-full" style={{ background: item.primary }} />{item.name}</button>)}
+            <div style={{ height: '42px', display: 'flex', alignItems: 'center', gap: '8px', padding: '0 14px', borderBottom: '1px solid rgba(255,255,255,0.07)', background: 'rgba(7,7,15,0.84)' }}>
+              <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#fb7185' }} />
+              <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#fbbf24' }} />
+              <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#34d399' }} />
+              <div style={{ marginLeft: '8px', flex: 1, height: '24px', borderRadius: '999px', background: 'rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', padding: '0 12px', color: 'rgba(255,255,255,0.34)', fontSize: '12px' }}>
+                lumina.studio/{portfolio.slug || 'preview'}
               </div>
             </div>
-
-            <div>
-              <h2 className="mb-3 font-bold text-white">Device</h2>
-              <div className="flex gap-2">
-                {[[Smartphone, 'mobile'], [Tablet, 'tablet'], [Monitor, 'desktop']].map(([Icon, item]) => <button key={item} onClick={() => setDevice(item)} className={`rounded-full p-3 ${device === item ? 'btn-primary' : 'bg-[rgba(255,255,255,0.05)] text-white'}`} aria-label={item}><Icon className="h-4 w-4" /></button>)}
-              </div>
-            </div>
-
-            <div>
-              <h2 className="mb-3 font-bold text-white">Regenerate</h2>
-              <div className="grid grid-cols-2 gap-2">
-                {['bio', 'tagline', 'projects', 'palette'].map((field) => <button disabled={isGenerating} key={field} onClick={() => regenerate(field)} className="rounded-full border border-white/[0.08] px-3 py-2 text-sm font-bold capitalize text-white disabled:opacity-50"><RefreshCw className="mr-1 inline h-3.5 w-3.5" />{field}</button>)}
-              </div>
-            </div>
-
-            {portfolio.slug && (
-              <div className="rounded-2xl border border-white/[0.08] bg-[#a855f7]/15 p-4">
-                <p className="flex items-center gap-2 font-bold text-[#c084fc]"><Check className="h-4 w-4" /> Shareable link ready</p>
-                <Link className="mt-3 inline-flex text-sm text-[#c084fc] underline" to={`/p/${portfolio.slug}`}>Open /p/{portfolio.slug}</Link>
-              </div>
-            )}
-          </motion.aside>
-
-          <section className="overflow-x-auto rounded-2xl border border-white/[0.08] bg-[#0a0a0f]/60 p-4">
-            <div className="mx-auto transition-all duration-300" style={{ width: widths[device], maxWidth: '100%' }}>
+            <div className="quiet-scrollbar" style={{ height: 'calc(100vh - 190px)', minHeight: '620px', overflow: 'auto', background: '#06060c' }}>
               <AnimatePresence mode="wait">
                 <motion.div
-                  key={resolveTemplateId(portfolio, portfolio.templateId)}
+                  key={currentTemplate}
                   initial={reduceMotion ? { opacity: 1 } : { opacity: 0, scale: 0.98, filter: 'blur(4px)' }}
                   animate={{ opacity: 1, scale: 1, filter: 'blur(0px)' }}
                   exit={reduceMotion ? { opacity: 0 } : { opacity: 0, scale: 0.98, filter: 'blur(4px)' }}
                   transition={{ duration: reduceMotion ? 0 : 0.3, ease: 'easeInOut' }}
-                  className="overflow-hidden rounded-2xl"
                 >
-                  <TemplateRenderer portfolio={portfolio} templateId={portfolio.templateId} />
+                  <TemplateRenderer portfolio={portfolio} templateId={currentTemplate} />
                 </motion.div>
               </AnimatePresence>
             </div>
-          </section>
-        </div>
-
-        <section className="mt-6 grid gap-4 md:grid-cols-3">
-          <motion.div whileHover={reduceMotion ? undefined : { y: -8, boxShadow: '0 0 30px rgba(168,85,247,0.3)' }} transition={{ type: 'spring', stiffness: 320, damping: 26 }} className="rounded-2xl border border-white/[0.08] bg-[rgba(255,255,255,0.05)] p-5">
-            <BarChart3 className="mb-3 h-5 w-5 text-[#60a5fa]" />
-            <p className="text-2xl font-black">{portfolio.views || 0}</p>
-            <p className="text-sm text-white/50">Tracked views</p>
-          </motion.div>
-          <motion.div whileHover={reduceMotion ? undefined : { y: -8, boxShadow: '0 0 30px rgba(168,85,247,0.3)' }} transition={{ type: 'spring', stiffness: 320, damping: 26 }} className="rounded-2xl border border-white/[0.08] bg-[rgba(255,255,255,0.05)] p-5">
-            <Code2 className="mb-3 h-5 w-5 text-[#60a5fa]" />
-            <p className="text-2xl font-black">{portfolio.exports || 0}</p>
-            <p className="text-sm text-white/50">Tracked exports</p>
-          </motion.div>
-          <motion.div whileHover={reduceMotion ? undefined : { y: -8, boxShadow: '0 0 30px rgba(168,85,247,0.3)' }} transition={{ type: 'spring', stiffness: 320, damping: 26 }} className="rounded-2xl border border-white/[0.08] bg-[rgba(255,255,255,0.05)] p-5">
-            <WandSparkles className="mb-3 h-5 w-5 text-[#60a5fa]" />
-            <p className="text-2xl font-black">{portfolio.generationMetadata?.model || 'gemini-1.5-flash'}</p>
-            <p className="text-sm text-white/50">Generation model</p>
           </motion.div>
         </section>
-      </motion.div>
+      </div>
+
+      <style>{`
+        @media (max-width: 1024px) {
+          .preview-layout aside {
+            position: relative !important;
+            top: auto !important;
+            height: auto !important;
+            border-right: none !important;
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+          }
+        }
+      `}</style>
     </main>
   );
-};
-
-export default PreviewPage;
+}

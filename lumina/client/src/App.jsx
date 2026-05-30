@@ -1,4 +1,5 @@
 import { lazy, Suspense } from 'react';
+import PropTypes from 'prop-types';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { Route, Routes, useLocation } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
@@ -19,6 +20,18 @@ const BillingPage = lazy(() => import('./pages/BillingPage'));
 const BillingSuccessPage = lazy(() => import('./pages/BillingSuccessPage'));
 const NotFoundPage = lazy(() => import('./pages/NotFoundPage'));
 
+const InnerPageShell = ({ children }) => (
+  <>
+    <div className="lumina-ambient" />
+    <div className="lumina-noise" />
+    {children}
+  </>
+);
+
+InnerPageShell.propTypes = {
+  children: PropTypes.node.isRequired
+};
+
 const AnimatedRoutes = () => {
   const location = useLocation();
   const reduceMotion = useReducedMotion();
@@ -34,18 +47,18 @@ const AnimatedRoutes = () => {
         <Suspense fallback={<main className="min-h-screen bg-ink p-4"><LoadingScreen /></main>}>
           <Routes location={location}>
             <Route path="/" element={<LandingPage />} />
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/auth/callback" element={<OAuthCallbackPage />} />
-            <Route path="/build" element={<BuildPage />} />
-            <Route path="/preview" element={<PreviewPage />} />
-            <Route path="/pricing" element={<PricingPage />} />
+            <Route path="/login" element={<InnerPageShell><LoginPage /></InnerPageShell>} />
+            <Route path="/auth/callback" element={<InnerPageShell><OAuthCallbackPage /></InnerPageShell>} />
+            <Route path="/build" element={<InnerPageShell><BuildPage /></InnerPageShell>} />
+            <Route path="/preview" element={<InnerPageShell><PreviewPage /></InnerPageShell>} />
+            <Route path="/pricing" element={<InnerPageShell><PricingPage /></InnerPageShell>} />
             <Route element={<ProtectedRoute />}>
-              <Route path="/dashboard" element={<DashboardPage />} />
-              <Route path="/dashboard/billing" element={<BillingPage />} />
-              <Route path="/dashboard/billing/success" element={<BillingSuccessPage />} />
+              <Route path="/dashboard" element={<InnerPageShell><DashboardPage /></InnerPageShell>} />
+              <Route path="/dashboard/billing" element={<InnerPageShell><BillingPage /></InnerPageShell>} />
+              <Route path="/dashboard/billing/success" element={<InnerPageShell><BillingSuccessPage /></InnerPageShell>} />
             </Route>
             <Route path="/p/:slug" element={<PublicPortfolioPage />} />
-            <Route path="*" element={<NotFoundPage />} />
+            <Route path="*" element={<InnerPageShell><NotFoundPage /></InnerPageShell>} />
           </Routes>
         </Suspense>
       </motion.div>

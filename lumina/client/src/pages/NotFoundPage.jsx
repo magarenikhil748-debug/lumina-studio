@@ -1,13 +1,13 @@
 import { motion, useReducedMotion } from 'framer-motion';
 import { Link } from 'react-router-dom';
-import AnimatedBackground from '../components/AnimatedBackground';
+import Navbar from '../components/Navbar';
 
 const NotFoundPage = () => {
   const reduceMotion = useReducedMotion();
 
   return (
-    <main className="relative grid min-h-screen place-items-center overflow-hidden bg-[#0a0a0f] p-6 text-center text-white">
-      <AnimatedBackground />
+    <main className="lumina-page relative grid min-h-screen place-items-center overflow-hidden p-6 text-center text-white">
+      <Navbar />
       {!reduceMotion && (
         <>
           <motion.span className="absolute left-[18%] top-[24%] h-24 w-24 rounded-full border border-white/[0.08]" animate={{ y: [0, -16, 0], rotate: [0, 12, 0] }} transition={{ duration: 7, repeat: Infinity, ease: 'easeInOut' }} />
