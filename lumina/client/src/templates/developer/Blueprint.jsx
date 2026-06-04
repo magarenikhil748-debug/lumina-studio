@@ -1,28 +1,33 @@
 import { memo } from 'react';
 import PropTypes from 'prop-types';
 import { motion, useReducedMotion } from 'framer-motion';
+import PhysicsSurface from '../../lib/motion/PhysicsSurface';
+import Reveal from '../../lib/motion/Reveal';
 import TemplateBase from '../shared/TemplateBase';
 import AnimatedSection from '../shared/AnimatedSection';
 import ContactRow from '../shared/ContactRow';
-import CursorGlow from '../shared/CursorGlow';
 import NoiseTexture from '../shared/NoiseTexture';
 import ProjectCard from '../shared/ProjectCard';
 import { clampProjects, clampSkills, getBio } from '../shared/templateData';
 
-const Compass = () => (
-  <motion.svg
-    viewBox="0 0 120 120"
-    className="h-28 w-28 text-[#4a90d9]"
-    animate={{ rotate: 360 }}
-    transition={{ repeat: Infinity, duration: 20, ease: 'linear' }}
-    aria-hidden="true"
-  >
-    <circle cx="60" cy="60" r="52" fill="none" stroke="currentColor" strokeWidth="1" opacity="0.45" />
-    <path d="M60 10 L72 60 L60 110 L48 60 Z" fill="none" stroke="currentColor" strokeWidth="2" />
-    <path d="M10 60 H110 M60 10 V110" stroke="currentColor" strokeWidth="1" opacity="0.35" />
-    <circle cx="60" cy="60" r="5" fill="currentColor" />
-  </motion.svg>
-);
+const Compass = () => {
+  const reduceMotion = useReducedMotion();
+
+  return (
+    <motion.svg
+      viewBox="0 0 120 120"
+      className="h-28 w-28 text-[#4a90d9]"
+      animate={reduceMotion ? undefined : { rotate: 360 }}
+      transition={{ repeat: Infinity, duration: 20, ease: 'linear' }}
+      aria-hidden="true"
+    >
+      <circle cx="60" cy="60" r="52" fill="none" stroke="currentColor" strokeWidth="1" opacity="0.45" />
+      <path d="M60 10 L72 60 L60 110 L48 60 Z" fill="none" stroke="currentColor" strokeWidth="2" />
+      <path d="M10 60 H110 M60 10 V110" stroke="currentColor" strokeWidth="1" opacity="0.35" />
+      <circle cx="60" cy="60" r="5" fill="currentColor" />
+    </motion.svg>
+  );
+};
 
 const Blueprint = memo(({ portfolio }) => {
   const reduceMotion = useReducedMotion();
@@ -44,25 +49,37 @@ const Blueprint = memo(({ portfolio }) => {
           backgroundSize: '40px 40px'
         }}
       >
-        <CursorGlow color="rgba(74,144,217,0.14)" size={390} blur={62} />
         <NoiseTexture opacity={0.035} blendMode="screen" />
-        <section className="mx-auto grid min-h-[82vh] max-w-7xl gap-10 lg:grid-cols-[1fr_320px] lg:items-center">
-          <div>
+        <style>{`
+          @keyframes blueprintJitter {
+            0%, 100% { transform: translate3d(0,0,0); }
+            25% { transform: translate3d(2px,-1px,0); }
+            55% { transform: translate3d(-2px,1px,0); }
+            80% { transform: translate3d(1px,2px,0); }
+          }
+          .blueprint-jitter:hover { animation: blueprintJitter .16s steps(2) 2; }
+          .blueprint-brutal-card { transition: filter .08s steps(1), border-color .08s steps(1); }
+          .blueprint-brutal-card:hover { filter: invert(1); }
+          .blueprint-cta { background: linear-gradient(90deg, #d9edff 0 50%, rgba(74,144,217,.1) 50% 100%); background-size: 200% 100%; background-position: 100% 0; }
+          .blueprint-cta:hover { background-position: 0 0; color: #0d1b2a; transition: background-position .16s steps(3); }
+        `}</style>
+        <section id="blueprint-profile" className="mx-auto grid min-h-screen max-w-7xl gap-10 lg:grid-cols-[1fr_320px] lg:items-center">
+          <Reveal variant="bruteSlam" className="blueprint-jitter">
             <p className="font-mono text-sm font-black uppercase tracking-[0.34em] text-[#78b9ff]">Spec 00 - Profile</p>
             <h1 className="mt-6 text-[clamp(3rem,8vw,8rem)] font-black uppercase leading-[0.88] tracking-tight text-white">
               {portfolio.name}
             </h1>
             <p className="mt-6 max-w-2xl text-2xl font-bold text-[#b8ddff]">{portfolio.title}</p>
             <p className="mt-5 max-w-3xl text-lg leading-8 text-[#d9edff]/70">{getBio(portfolio)}</p>
-            <ContactRow portfolio={portfolio} className="mt-8" linkClassName="border border-[#4a90d9]/40 bg-[#4a90d9]/10 text-[#d9edff]" />
-          </div>
-          <div className="grid place-items-center rounded-full border border-dashed border-[#4a90d9]/40 bg-[#4a90d9]/5 p-12">
+            <ContactRow portfolio={portfolio} className="mt-8" linkClassName="blueprint-cta border border-[#4a90d9]/40 text-[#d9edff]" />
+          </Reveal>
+          <Reveal variant="bruteSlam" className="grid place-items-center rounded-full border border-dashed border-[#4a90d9]/40 bg-[#4a90d9]/5 p-12">
             <Compass />
-          </div>
+          </Reveal>
         </section>
 
-        <AnimatedSection className="mx-auto mt-10 max-w-7xl">
-          <p className="font-mono text-sm font-black uppercase tracking-[0.34em] text-[#78b9ff]">Spec 01 - System Architecture</p>
+        <AnimatedSection id="blueprint-architecture" className="mx-auto mt-10 min-h-screen max-w-7xl">
+          <Reveal variant="bruteSlam"><p className="font-mono text-sm font-black uppercase tracking-[0.34em] text-[#78b9ff]">Spec 01 - System Architecture</p></Reveal>
           <div className="relative mt-8 min-h-[320px] rounded-3xl border border-dashed border-[#4a90d9]/35 bg-[#0d1b2a]/82 p-6">
             <svg className="absolute inset-0 h-full w-full" aria-hidden="true">
               {nodes.slice(0, -1).map((node, index) => {
@@ -99,17 +116,18 @@ const Blueprint = memo(({ portfolio }) => {
           </div>
         </AnimatedSection>
 
-        <AnimatedSection className="mx-auto mt-20 max-w-7xl">
-          <p className="font-mono text-sm font-black uppercase tracking-[0.34em] text-[#78b9ff]">Spec 02 - Project Schematics</p>
+        <AnimatedSection id="blueprint-schematics" className="mx-auto mt-20 min-h-screen max-w-7xl">
+          <Reveal variant="bruteSlam"><p className="font-mono text-sm font-black uppercase tracking-[0.34em] text-[#78b9ff]">Spec 02 - Project Schematics</p></Reveal>
           <div className="mt-8 grid gap-5 lg:grid-cols-2">
             {projects.map((project, index) => (
-              <ProjectCard
-                key={project.title}
-                project={project}
-                index={index}
-                variant="blueprint"
-                className="border-dashed before:absolute before:left-4 before:top-4 before:h-5 before:w-5 before:border-l before:border-t before:border-[#4a90d9]/70 after:absolute after:bottom-4 after:right-4 after:h-5 after:w-5 after:border-b after:border-r after:border-[#4a90d9]/70"
-              />
+              <PhysicsSurface key={project.title} type="shatter" intensity={0.2}>
+                <ProjectCard
+                  project={project}
+                  index={index}
+                  variant="blueprint"
+                  className="blueprint-brutal-card border border-dashed before:absolute before:left-4 before:top-4 before:h-5 before:w-5 before:border-l before:border-t before:border-[#4a90d9]/70 after:absolute after:bottom-4 after:right-4 after:h-5 after:w-5 after:border-b after:border-r after:border-[#4a90d9]/70 hover:border-4"
+                />
+              </PhysicsSurface>
             ))}
           </div>
         </AnimatedSection>

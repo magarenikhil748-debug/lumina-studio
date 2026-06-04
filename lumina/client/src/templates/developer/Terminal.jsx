@@ -1,10 +1,11 @@
-import { memo, useEffect, useMemo, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import PropTypes from 'prop-types';
 import { motion, useReducedMotion } from 'framer-motion';
+import PhysicsSurface from '../../lib/motion/PhysicsSurface';
+import Reveal from '../../lib/motion/Reveal';
 import TemplateBase from '../shared/TemplateBase';
 import AnimatedSection from '../shared/AnimatedSection';
 import ContactRow from '../shared/ContactRow';
-import CursorGlow from '../shared/CursorGlow';
 import NoiseTexture from '../shared/NoiseTexture';
 import ProjectCard from '../shared/ProjectCard';
 import { clampProjects, clampSkills, getBio, randomFromString } from '../shared/templateData';
@@ -40,14 +41,83 @@ MatrixRain.propTypes = {
   active: PropTypes.bool.isRequired
 };
 
+const TypedLine = ({ line, delay, reduceMotion, onKey }) => {
+  const [displayed, setDisplayed] = useState(reduceMotion ? line : '');
+
+  useEffect(() => {
+    if (reduceMotion) {
+      setDisplayed(line);
+      return undefined;
+    }
+    let interval;
+    const timeout = window.setTimeout(() => {
+      let index = 0;
+      const speed = window.innerWidth < 768 ? 12 : 24;
+      interval = window.setInterval(() => {
+        index += 1;
+        setDisplayed(line.slice(0, index));
+        onKey();
+        if (index >= line.length) window.clearInterval(interval);
+      }, speed);
+    }, delay);
+    return () => {
+      window.clearTimeout(timeout);
+      window.clearInterval(interval);
+    };
+  }, [delay, line, onKey, reduceMotion]);
+
+  return (
+    <p className={line.startsWith('$') ? 'text-[#00ff41]' : 'text-[#d7ffe1]/72'}>
+      {displayed}
+      {displayed.length < line.length ? <span className="text-[#00ff41]">_</span> : null}
+    </p>
+  );
+};
+
+TypedLine.propTypes = {
+  delay: PropTypes.number.isRequired,
+  line: PropTypes.string.isRequired,
+  onKey: PropTypes.func.isRequired,
+  reduceMotion: PropTypes.bool.isRequired
+};
+
 const Terminal = memo(({ portfolio }) => {
   const reduceMotion = useReducedMotion();
+  const audioContextRef = useRef(null);
   const [displayedName, setDisplayedName] = useState(reduceMotion ? portfolio.name : '');
   const [cursorVisible, setCursorVisible] = useState(true);
   const [isVisible, setIsVisible] = useState(!document.hidden);
   const skills = clampSkills(portfolio.skills);
   const projects = clampProjects(portfolio.projects);
   const bio = getBio(portfolio);
+
+  useEffect(() => {
+    if (reduceMotion || window.matchMedia('(pointer: coarse)').matches) return undefined;
+    const activateAudio = () => {
+      if (!audioContextRef.current) audioContextRef.current = new window.AudioContext();
+      audioContextRef.current.resume?.();
+    };
+    window.addEventListener('pointerdown', activateAudio, { once: true });
+    return () => {
+      window.removeEventListener('pointerdown', activateAudio);
+      audioContextRef.current?.close?.();
+    };
+  }, [reduceMotion]);
+
+  const playKeyClick = useCallback(() => {
+    const context = audioContextRef.current;
+    if (!context || context.state !== 'running' || reduceMotion || window.innerWidth < 768) return;
+    const oscillator = context.createOscillator();
+    const gain = context.createGain();
+    oscillator.type = 'square';
+    oscillator.frequency.value = 1050 + Math.random() * 180;
+    gain.gain.setValueAtTime(0.008, context.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.0001, context.currentTime + 0.018);
+    oscillator.connect(gain);
+    gain.connect(context.destination);
+    oscillator.start();
+    oscillator.stop(context.currentTime + 0.02);
+  }, [reduceMotion]);
 
   useEffect(() => {
     const onVisibility = () => setIsVisible(!document.hidden);
@@ -102,12 +172,29 @@ const Terminal = memo(({ portfolio }) => {
           animation: terminalScan 2.8s linear infinite;
           z-index: 2;
         }
+        @keyframes terminalFlicker {
+          0%, 100% { opacity: 1; transform: translateX(0); }
+          35% { opacity: .65; transform: translateX(2px); }
+          70% { opacity: .9; transform: translateX(-1px); }
+        }
+        .terminal-project-card:hover { animation: terminalFlicker .18s steps(2) 2; }
       `}</style>
       <main className="terminal-scanline relative min-h-screen overflow-hidden bg-[#0a0a0f] px-5 py-16 text-[#d7ffe1] sm:px-8 lg:px-14">
         <MatrixRain active={!reduceMotion && isVisible} />
-        <CursorGlow color="rgba(0,255,65,0.12)" size={360} blur={58} />
         <NoiseTexture opacity={0.03} blendMode="screen" />
-        <section className="relative z-10 mx-auto grid max-w-7xl gap-12 lg:grid-cols-[0.9fr_1.1fr] lg:items-center">
+        {['0x7F', 'SYS', '01', 'OK'].map((value, index) => (
+          <motion.span
+            key={value}
+            aria-hidden="true"
+            animate={reduceMotion ? undefined : { opacity: [0.04, 0.28, 0.04] }}
+            transition={{ duration: 2.4 + index * 0.7, repeat: Infinity, delay: index * 0.55 }}
+            className="pointer-events-none fixed z-[3] font-mono text-xs text-[#00ff41]"
+            style={{ left: index % 2 ? 'auto' : 18, right: index % 2 ? 18 : 'auto', top: index < 2 ? 18 : 'auto', bottom: index >= 2 ? 18 : 'auto' }}
+          >
+            {value}
+          </motion.span>
+        ))}
+        <section id="terminal-hero" className="relative z-10 mx-auto grid min-h-screen max-w-7xl gap-12 lg:grid-cols-[0.9fr_1.1fr] lg:items-center">
           <div>
             <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-sm font-black text-[#00ff41]/75">lumina@portfolio:~$ initialize</motion.p>
             <h1 className="mt-6 break-words text-[clamp(3rem,9vw,8rem)] font-black leading-[0.9] tracking-tight text-[#00ff41]">
@@ -130,22 +217,20 @@ const Terminal = memo(({ portfolio }) => {
             </div>
             <div className="space-y-2 text-sm leading-7">
               {promptLines.map((line, index) => (
-                <motion.p
+                <TypedLine
                   key={`${line}-${index}`}
-                  initial={reduceMotion ? { opacity: 1 } : { opacity: 0, x: -8 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: reduceMotion ? 0 : index * 0.3, duration: 0.28 }}
-                  className={line.startsWith('$') ? 'text-[#00ff41]' : 'text-[#d7ffe1]/72'}
-                >
-                  {line}
-                </motion.p>
+                  line={line}
+                  delay={index * 190}
+                  reduceMotion={Boolean(reduceMotion)}
+                  onKey={playKeyClick}
+                />
               ))}
             </div>
           </motion.div>
         </section>
 
-        <AnimatedSection className="relative z-10 mx-auto mt-24 max-w-7xl">
-          <p className="text-[#00ff41]">$ cat skills.log</p>
+        <AnimatedSection className="relative z-10 mx-auto mt-24 max-w-7xl" id="terminal-skills">
+          <Reveal variant="glitchIn"><p className="text-[#00ff41]">$ cat skills.log</p></Reveal>
           <div className="mt-6 grid gap-4 md:grid-cols-2">
             {skills.map((skill, index) => {
               const percentage = randomFromString(skill.name, 70, 98);
@@ -153,7 +238,9 @@ const Terminal = memo(({ portfolio }) => {
                 <div key={skill.name} className="rounded-2xl border border-[#00ff41]/16 bg-[#00ff41]/5 p-4">
                   <div className="flex items-center justify-between gap-4 text-sm">
                     <span className="truncate text-[#d7ffe1]">{skill.name.padEnd(14, ' ')}</span>
-                    <span className="text-[#00ff41]/70">{percentage}%</span>
+                    <span className="text-[#00ff41]/70">
+                      [{'\u2588'.repeat(Math.round(percentage / 10))}{'\u2591'.repeat(10 - Math.round(percentage / 10))}] {percentage}%
+                    </span>
                   </div>
                   <div className="mt-3 h-3 overflow-hidden rounded-full bg-[#00ff41]/10">
                     <motion.div
@@ -170,10 +257,14 @@ const Terminal = memo(({ portfolio }) => {
           </div>
         </AnimatedSection>
 
-        <AnimatedSection className="relative z-10 mx-auto mt-24 max-w-7xl">
-          <p className="text-[#00ff41]">$ ls ./projects</p>
+        <AnimatedSection className="relative z-10 mx-auto mt-24 max-w-7xl" id="terminal-projects">
+          <Reveal variant="glitchIn"><p className="text-[#00ff41]">$ ls ./projects</p></Reveal>
           <div className="mt-6 grid gap-5 lg:grid-cols-2">
-            {projects.map((project, index) => <ProjectCard key={project.title} project={project} index={index} variant="terminal" />)}
+            {projects.map((project, index) => (
+              <PhysicsSurface key={project.title} type="shatter" intensity={0.18} className="terminal-project-card">
+                <ProjectCard project={project} index={index} variant="terminal" />
+              </PhysicsSurface>
+            ))}
           </div>
         </AnimatedSection>
       </main>

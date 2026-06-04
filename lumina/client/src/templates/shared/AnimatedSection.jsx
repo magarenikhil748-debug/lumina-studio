@@ -9,7 +9,7 @@ const offsets = {
   none: { x: 0, y: 0 }
 };
 
-const AnimatedSection = ({ children, delay = 0, direction = 'up', className = '', once = true }) => {
+const AnimatedSection = ({ children, delay = 0, direction = 'up', className = '', once = true, ...props }) => {
   const prefersReducedMotion = useReducedMotion();
   const initial = prefersReducedMotion ? { opacity: 0 } : { opacity: 0, ...(offsets[direction] || offsets.up) };
 
@@ -24,6 +24,7 @@ const AnimatedSection = ({ children, delay = 0, direction = 'up', className = ''
         ease: [0.21, 0.47, 0.32, 0.98]
       }}
       className={className}
+      {...props}
     >
       {children}
     </motion.div>

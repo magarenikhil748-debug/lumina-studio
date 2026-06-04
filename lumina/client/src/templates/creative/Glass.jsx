@@ -1,10 +1,11 @@
-import { memo, useMemo, useRef } from 'react';
+import { memo, useMemo } from 'react';
 import PropTypes from 'prop-types';
 import { ArrowUpRight, ExternalLink, Github, Layers3, Sparkles } from 'lucide-react';
-import { motion, useReducedMotion, useScroll, useTransform } from 'framer-motion';
+import { motion, useReducedMotion, useTransform } from 'framer-motion';
+import PhysicsSurface from '../../lib/motion/PhysicsSurface';
+import { useTemplateMotion } from '../../lib/motion/TemplateMotionContext';
 import TemplateBase from '../shared/TemplateBase';
 import ContactRow from '../shared/ContactRow';
-import CursorGlow from '../shared/CursorGlow';
 import GenerativeAvatar from '../shared/GenerativeAvatar';
 import MagneticButton from '../shared/MagneticButton';
 import NoiseTexture from '../shared/NoiseTexture';
@@ -38,6 +39,33 @@ const getSkillCategory = (skill) => {
   return 'craft';
 };
 
+const GlassName = ({ name, reduceMotion }) => (
+  <motion.h1
+    variants={{ hidden: {}, visible: { transition: { staggerChildren: reduceMotion ? 0 : 0.03 } } }}
+    initial="hidden"
+    animate="visible"
+    className="mt-7 max-w-5xl text-[clamp(3rem,7.4vw,7.6rem)] font-black leading-[0.88] tracking-tight"
+  >
+    {String(name || 'Lumina').split('').map((letter, index) => (
+      <motion.span
+        key={`${letter}-${index}`}
+        variants={{
+          hidden: reduceMotion ? { opacity: 1, y: 0 } : { opacity: 0, y: 24 },
+          visible: { opacity: 1, y: 0, transition: { duration: 0.42, ease: [0.22, 1, 0.36, 1] } }
+        }}
+        style={{ display: 'inline-block', willChange: 'transform, opacity' }}
+      >
+        {letter === ' ' ? '\u00a0' : letter}
+      </motion.span>
+    ))}
+  </motion.h1>
+);
+
+GlassName.propTypes = {
+  name: PropTypes.string,
+  reduceMotion: PropTypes.bool.isRequired
+};
+
 const SectionHeader = ({ index, eyebrow, title, copy }) => (
   <ScrollReveal className="grid gap-5 border-t border-white/10 pt-6 md:grid-cols-[140px_1fr]">
     <div className="flex items-center gap-3 self-start text-xs font-black uppercase tracking-[0.24em] text-white/38">
@@ -61,18 +89,14 @@ SectionHeader.propTypes = {
 };
 
 const Glass = memo(({ portfolio }) => {
-  const heroRef = useRef(null);
   const reduceMotion = useReducedMotion();
+  const { parallaxY, scrollProgress } = useTemplateMotion();
   const projects = clampProjects(portfolio.projects);
   const skills = clampSkills(portfolio.skills);
-  const { scrollYProgress } = useScroll({
-    target: heroRef,
-    offset: ['start start', 'end start']
-  });
-  const heroY = useTransform(scrollYProgress, [0, 1], [0, 120]);
-  const heroOpacity = useTransform(scrollYProgress, [0, 0.82], [1, 0]);
-  const heroScale = useTransform(scrollYProgress, [0, 1], [1, 0.96]);
-  const avatarY = useTransform(scrollYProgress, [0, 1], [0, -80]);
+  const heroY = useTransform(scrollProgress, [0, 0.24], [0, 120]);
+  const heroOpacity = useTransform(scrollProgress, [0, 0.2], [1, 0]);
+  const heroScale = useTransform(scrollProgress, [0, 0.24], [1, 0.96]);
+  const avatarY = parallaxY['.glass-experience-avatar'];
 
   const categories = useMemo(() => skills.reduce((result, skill) => {
     const category = getSkillCategory(skill);
@@ -129,12 +153,11 @@ const Glass = memo(({ portfolio }) => {
           <div className="absolute right-[12%] top-[-30%] h-[140%] w-px bg-gradient-to-b from-transparent via-[#ec4899]/60 to-transparent" />
         </ParallaxLayer>
 
-        <CursorGlow color="rgba(168,85,247,0.2)" zIndex={3} />
         <NoiseTexture opacity={0.045} zIndex={4} />
 
         {/* Depth 04: hero content */}
         <section
-          ref={heroRef}
+          id="glass-hero"
           className="glass-experience-hero relative z-10 mx-auto min-h-screen max-w-[1440px]"
           style={{
             display: 'grid',
@@ -160,14 +183,7 @@ const Glass = memo(({ portfolio }) => {
               <Sparkles className="h-3.5 w-3.5" />
               Living portfolio
             </motion.div>
-            <motion.h1
-              initial={reduceMotion ? false : { opacity: 0, y: 28, filter: 'blur(12px)' }}
-              animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
-              transition={{ duration: 0.85, delay: reduceMotion ? 0 : 0.08, ease: [0.22, 1, 0.36, 1] }}
-              className="mt-7 max-w-5xl text-[clamp(3rem,7.4vw,7.6rem)] font-black leading-[0.88] tracking-tight"
-            >
-              {portfolio.name}
-            </motion.h1>
+            <GlassName name={portfolio.name} reduceMotion={Boolean(reduceMotion)} />
             <motion.p
               initial={reduceMotion ? false : { opacity: 0, y: 18 }}
               animate={{ opacity: 1, y: 0 }}
@@ -254,7 +270,7 @@ const Glass = memo(({ portfolio }) => {
         <div aria-hidden="true" className="pointer-events-none absolute left-[6vw] top-[92vh] z-20 h-24 w-px bg-gradient-to-b from-[#c084fc]/80 to-transparent" />
         <div aria-hidden="true" className="pointer-events-none absolute right-[7vw] top-[120vh] z-20 h-px w-[18vw] bg-gradient-to-l from-[#60a5fa]/70 to-transparent" />
 
-        <section className="relative z-10 mx-auto max-w-7xl px-5 pb-20 pt-16 sm:px-10 lg:px-16">
+        <section id="glass-capabilities" className="relative z-10 mx-auto max-w-7xl px-5 pb-20 pt-16 sm:px-10 lg:px-16">
           <SectionHeader
             index="01"
             eyebrow="Capabilities"
@@ -303,6 +319,8 @@ const Glass = memo(({ portfolio }) => {
                   <MagneticButton
                     key={skill.name}
                     strength={0.13}
+                    data-magnetic="true"
+                    data-cursor-variant="hover"
                     aria-label={`${skill.name}, ${category} capability`}
                     className="rounded-full px-4 py-2 text-sm font-bold"
                     style={{
@@ -317,6 +335,10 @@ const Glass = memo(({ portfolio }) => {
                     viewport={{ once: true }}
                     transition={{ delay: reduceMotion ? 0 : index * 0.035 }}
                     whileHover={reduceMotion ? undefined : { scale: 1.05 }}
+                    whileFocus={reduceMotion ? undefined : {
+                      scale: 1.05,
+                      boxShadow: `0 0 34px ${categoryStyle.glow}`
+                    }}
                   >
                     {skill.name}
                   </MagneticButton>
@@ -338,11 +360,14 @@ const Glass = memo(({ portfolio }) => {
               const tech = getTechList(project.techStack);
               return (
                 <ScrollReveal key={project.title} delay={index * 0.07} direction={index % 2 ? 'left' : 'right'}>
-                  <motion.article
-                    whileHover={reduceMotion ? undefined : { y: -7, borderColor: 'rgba(192,132,252,0.35)' }}
-                    className="group relative overflow-hidden rounded-[24px] p-1"
-                    style={glassStyle}
-                  >
+                  <PhysicsSurface type="tilt" intensity={0.28}>
+                    <motion.article
+                      data-magnetic="true"
+                      data-cursor-variant="hover"
+                      whileHover={reduceMotion ? undefined : { y: -7, borderColor: 'rgba(192,132,252,0.35)' }}
+                      className="group relative overflow-hidden rounded-[24px] p-1"
+                      style={glassStyle}
+                    >
                     <div
                       className="relative min-h-[210px] overflow-hidden rounded-[20px] border border-white/[0.08] p-6"
                       style={{
@@ -395,14 +420,15 @@ const Glass = memo(({ portfolio }) => {
                         ) : null}
                       </div>
                     </div>
-                  </motion.article>
+                    </motion.article>
+                  </PhysicsSurface>
                 </ScrollReveal>
               );
             })}
           </div>
         </section>
 
-        <ScrollReveal className="relative z-10 mx-auto max-w-7xl px-5 pb-28 sm:px-10 lg:px-16">
+        <ScrollReveal id="glass-contact" className="relative z-10 mx-auto max-w-7xl px-5 pb-28 sm:px-10 lg:px-16">
           <div className="grid gap-8 rounded-[28px] p-7 md:grid-cols-[1fr_auto] md:items-end md:p-10" style={glassStyle}>
             <div>
               <p className="text-xs font-black uppercase tracking-[0.25em] text-[#d8b4fe]">Next chapter</p>

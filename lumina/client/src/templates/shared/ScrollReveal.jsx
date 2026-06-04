@@ -19,7 +19,8 @@ const ScrollReveal = memo(({
   delay = 0,
   duration = 0.65,
   once = true,
-  amount = 0.18
+  amount = 0.18,
+  ...props
 }) => {
   const reduceMotion = useReducedMotion();
   const offset = OFFSETS[direction] || OFFSETS.up;
@@ -44,6 +45,7 @@ const ScrollReveal = memo(({
         ease: [0.22, 1, 0.36, 1]
       }}
       style={style}
+      {...props}
     >
       {children}
     </motion.div>

@@ -1,6 +1,9 @@
 import { memo, useEffect, useState } from 'react';
 import PropTypes from 'prop-types';
-import { motion, useReducedMotion, useScroll, useSpring } from 'framer-motion';
+import { motion, useReducedMotion, useSpring } from 'framer-motion';
+import PhysicsSurface from '../../lib/motion/PhysicsSurface';
+import Reveal from '../../lib/motion/Reveal';
+import { useTemplateMotion } from '../../lib/motion/TemplateMotionContext';
 import TemplateBase from '../shared/TemplateBase';
 import AnimatedSection from '../shared/AnimatedSection';
 import ContactRow from '../shared/ContactRow';
@@ -37,19 +40,31 @@ CountUp.propTypes = {
   duration: PropTypes.number
 };
 
-const SectionTitle = ({ children }) => (
-  <div className="mb-8">
-    <h2 className="font-mono text-sm font-black uppercase tracking-[0.24em] text-zinc-500">{children}</h2>
-    <motion.div
-      initial={{ scaleX: 0 }}
-      whileInView={{ scaleX: 1 }}
-      viewport={{ once: true }}
-      style={{ transformOrigin: 'left', height: 2, background: 'var(--color-primary)' }}
-      transition={{ duration: 0.6, ease: 'easeOut' }}
-      className="mt-3 w-28"
-    />
-  </div>
-);
+const SectionTitle = ({ children }) => {
+  const reduceMotion = useReducedMotion();
+
+  return (
+    <div className="mb-8">
+      <motion.h2
+        initial={{ letterSpacing: '0.05em' }}
+        whileInView={{ letterSpacing: reduceMotion ? '0.05em' : '0.12em' }}
+        viewport={{ once: true }}
+        transition={{ duration: reduceMotion ? 0 : 0.7, ease: [0.22, 1, 0.36, 1] }}
+        className="font-mono text-sm font-black uppercase text-zinc-500"
+      >
+        {children}
+      </motion.h2>
+      <motion.div
+        initial={{ scaleX: reduceMotion ? 1 : 0 }}
+        whileInView={{ scaleX: 1 }}
+        viewport={{ once: true }}
+        style={{ transformOrigin: 'left', height: 2, background: 'var(--color-primary)' }}
+        transition={{ duration: reduceMotion ? 0 : 0.6, ease: 'easeOut' }}
+        className="mt-3 w-28"
+      />
+    </div>
+  );
+};
 
 SectionTitle.propTypes = {
   children: PropTypes.node.isRequired
@@ -57,8 +72,8 @@ SectionTitle.propTypes = {
 
 const MinimalCode = memo(({ portfolio }) => {
   const reduceMotion = useReducedMotion();
-  const { scrollYProgress } = useScroll();
-  const progress = useSpring(scrollYProgress, { stiffness: 120, damping: 28, mass: 0.3 });
+  const { scrollProgress } = useTemplateMotion();
+  const progress = useSpring(scrollProgress, { stiffness: 120, damping: 28, mass: 0.3 });
   const projects = clampProjects(portfolio.projects);
   const skills = clampSkills(portfolio.skills);
 
@@ -71,7 +86,7 @@ const MinimalCode = memo(({ portfolio }) => {
           <motion.div className="absolute left-1/2 top-0 h-3 w-3 -translate-x-1/2 rounded-full bg-[var(--color-primary)]" style={{ y: progress }} />
         </div>
 
-        <section className="mx-auto grid max-w-7xl gap-10 border-b border-zinc-200 pb-20 lg:grid-cols-[1.1fr_0.9fr] lg:items-end">
+        <section id="minimal-hero" className="mx-auto grid min-h-screen max-w-7xl gap-10 border-b border-zinc-200 pb-20 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
           <div>
             <p className="font-mono text-sm font-black text-[var(--color-primary)]">export default portfolio;</p>
             <h1 className="mt-6 text-[clamp(3rem,8vw,8rem)] font-black leading-[0.9] tracking-tight">
@@ -94,21 +109,29 @@ const MinimalCode = memo(({ portfolio }) => {
           </div>
         </section>
 
-        <AnimatedSection className="mx-auto mt-16 max-w-5xl">
-          <SectionTitle>About</SectionTitle>
-          <p className="max-w-4xl text-xl leading-10 text-zinc-700">{getBio(portfolio)}</p>
+        <AnimatedSection id="minimal-about" className="mx-auto mt-16 min-h-[70vh] max-w-5xl">
+          <Reveal variant="inkDrop">
+            <SectionTitle>About</SectionTitle>
+            <p className="max-w-4xl text-xl leading-10 text-zinc-700">{getBio(portfolio)}</p>
+          </Reveal>
         </AnimatedSection>
 
-        <AnimatedSection className="mx-auto mt-20 max-w-5xl">
-          <SectionTitle>Skills</SectionTitle>
+        <AnimatedSection id="minimal-skills" className="mx-auto mt-20 min-h-screen max-w-5xl">
+          <Reveal variant="inkDrop">
+            <SectionTitle>Skills</SectionTitle>
+          </Reveal>
           <div className="rounded-3xl border border-zinc-200 bg-white p-6 shadow-sm">
             <p className="text-sm text-zinc-400">┌─ capability map ──────────────────────────────────────┐</p>
             <div className="mt-5 space-y-4">
               {skills.map((skill, index) => {
                 const percentage = randomFromString(skill.name, 74, 96);
                 return (
-                  <div key={skill.name} className="grid gap-3 sm:grid-cols-[160px_1fr_48px] sm:items-center">
-                    <span className="text-sm font-bold">{skill.name}</span>
+                  <div key={skill.name} className="group relative grid overflow-hidden rounded-lg p-2 gap-3 sm:grid-cols-[160px_1fr_48px] sm:items-center">
+                    <span
+                      aria-hidden="true"
+                      className="pointer-events-none absolute left-[14%] top-1/2 h-12 w-12 -translate-y-1/2 scale-0 rounded-full bg-zinc-950 transition-transform duration-500 group-hover:scale-[5]"
+                    />
+                    <span className="relative z-10 text-sm font-bold transition-colors group-hover:text-white">{skill.name}</span>
                     <div className="h-3 overflow-hidden rounded-full bg-zinc-100">
                       <motion.div
                         initial={{ width: 0 }}
@@ -127,16 +150,16 @@ const MinimalCode = memo(({ portfolio }) => {
           </div>
         </AnimatedSection>
 
-        <AnimatedSection className="mx-auto mt-20 max-w-7xl">
-          <SectionTitle>Commits</SectionTitle>
+        <AnimatedSection id="minimal-commits" className="mx-auto mt-20 min-h-screen max-w-7xl">
+          <Reveal variant="inkDrop"><SectionTitle>Commits</SectionTitle></Reveal>
           <div className="grid gap-5 lg:grid-cols-2">
             {projects.map((project, index) => (
-              <div key={project.title} className="relative">
+              <PhysicsSurface key={project.title} type="ripple" intensity={0.14} className="relative transition-shadow hover:shadow-[0_24px_60px_rgba(24,18,12,0.16)]">
                 <span className="absolute left-5 top-5 z-10 rounded-full bg-zinc-950 px-3 py-1 font-mono text-xs font-black text-white">
                   #{randomFromString(project.title, 4096, 65535).toString(16).slice(0, 4)}
                 </span>
                 <ProjectCard project={{ ...project, title: `Added ${project.title}` }} index={index} variant="minimalcode" className="pt-14 transition group-hover:border-l-[var(--color-primary)]" />
-              </div>
+              </PhysicsSurface>
             ))}
           </div>
         </AnimatedSection>
