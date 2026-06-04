@@ -4,6 +4,7 @@ import { motion, useReducedMotion } from 'framer-motion';
 export default function LuminaLogo({ size = 32, showGlow = true, animate = true }) {
   const prefersReducedMotion = useReducedMotion();
   const shouldAnimate = animate && !prefersReducedMotion;
+  const radius = size * 0.28;
 
   return (
     <div
@@ -17,33 +18,30 @@ export default function LuminaLogo({ size = 32, showGlow = true, animate = true 
       {showGlow && (
         <motion.div
           animate={shouldAnimate ? {
-            opacity: [0.4, 0.8, 0.4],
-            scale: [1, 1.15, 1]
+            opacity: [0.4, 0.9, 0.4]
           } : {}}
-          transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
+          transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}
           style={{
             position: 'absolute',
-            inset: '-4px',
-            borderRadius: '50%',
-            background: 'radial-gradient(circle, rgba(168,85,247,0.35) 0%, rgba(236,72,153,0.2) 50%, transparent 70%)',
-            filter: 'blur(6px)',
-            pointerEvents: 'none'
+            inset: `-${size * 0.18}px`,
+            borderRadius: `${radius * 1.4}px`,
+            background: 'radial-gradient(circle, rgba(168,85,247,0.5) 0%, rgba(236,72,153,0.2) 50%, transparent 75%)',
+            filter: `blur(${size * 0.25}px)`,
+            pointerEvents: 'none',
+            zIndex: 0
           }}
         />
       )}
 
       <motion.div
         animate={shouldAnimate ? { rotate: 360 } : {}}
-        transition={{ duration: 4, repeat: Infinity, ease: 'linear' }}
+        transition={{ duration: 3, repeat: Infinity, ease: 'linear' }}
         style={{
           position: 'absolute',
           inset: 0,
-          borderRadius: '50%',
-          padding: '1.5px',
-          background: 'conic-gradient(from 0deg, #a855f7, #ec4899, #3b82f6, #a855f7)',
-          WebkitMask: 'linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)',
-          WebkitMaskComposite: 'xor',
-          maskComposite: 'exclude'
+          borderRadius: `${radius}px`,
+          background: 'conic-gradient(from 0deg, #a855f7 0%, #ec4899 30%, #3b82f6 60%, #a855f7 100%)',
+          zIndex: 1
         }}
       />
 
@@ -51,25 +49,23 @@ export default function LuminaLogo({ size = 32, showGlow = true, animate = true 
         style={{
           position: 'absolute',
           inset: '2px',
-          borderRadius: '50%',
-          background: 'linear-gradient(135deg, #1a0a2e 0%, #0d0d1a 100%)',
+          borderRadius: `${Math.max(radius - 2, 0)}px`,
+          background: 'radial-gradient(circle at 30% 30%, #1e0a38, #0d0b1a)',
           display: 'flex',
           alignItems: 'center',
-          justifyContent: 'center'
+          justifyContent: 'center',
+          zIndex: 2
         }}
       >
         <span
           style={{
-            fontSize: size * 0.38,
+            fontSize: size * 0.44,
             fontWeight: 800,
             color: '#ffffff',
             lineHeight: 1,
             letterSpacing: '0',
             fontFamily: "'Inter', sans-serif",
-            background: 'linear-gradient(135deg, #ffffff 0%, rgba(255,255,255,0.85) 100%)',
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent',
-            backgroundClip: 'text'
+            userSelect: 'none'
           }}
         >
           L
