@@ -68,7 +68,7 @@ const normalizePlan = (value) => {
 
 function PanelLabel({ children, icon }) {
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '10px' }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '7px' }}>
       {icon ? <span style={{ color: 'rgba(255,255,255,0.3)', display: 'flex' }}>{icon}</span> : null}
       <span
         style={{
@@ -230,10 +230,10 @@ export default function PreviewPage() {
             backdropFilter: 'blur(32px)',
             WebkitBackdropFilter: 'blur(32px)',
             borderRight: '1px solid rgba(255,255,255,0.07)',
-            padding: '20px 16px',
+            padding: '20px 14px',
             display: 'flex',
             flexDirection: 'column',
-            gap: '24px',
+            gap: '28px',
             scrollbarWidth: 'thin',
             scrollbarColor: 'rgba(168,85,247,0.2) transparent'
           }}
@@ -442,65 +442,98 @@ export default function PreviewPage() {
 
           <div>
             <PanelLabel icon={<FileText size={10} />}>Export</PanelLabel>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              <motion.button
-                type="button"
-                onClick={copyCode}
-                whileHover={{ background: 'rgba(255,255,255,0.08)', borderColor: 'rgba(255,255,255,0.15)' }}
-                whileTap={{ scale: 0.98 }}
-                style={exportButtonStyle}
-              >
-                <Code2 size={14} color="rgba(255,255,255,0.5)" />
-                <span>
-                  <span style={exportTitleStyle}>Copy HTML</span>
-                  <span style={exportDescriptionStyle}>Standalone file</span>
-                </span>
-              </motion.button>
-
-              <motion.button
-                type="button"
-                onClick={downloadPdf}
-                whileHover={{ background: 'rgba(255,255,255,0.06)' }}
-                whileTap={{ scale: 0.98 }}
-                style={{ ...exportButtonStyle, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', color: canPdfExport ? 'rgba(255,255,255,0.75)' : 'rgba(255,255,255,0.35)' }}
-              >
-                <FileText size={14} color={canPdfExport ? 'rgba(255,255,255,0.5)' : 'rgba(255,255,255,0.25)'} />
-                <span style={{ flex: 1 }}>
-                  <span style={exportTitleStyle}>Download PDF</span>
-                  <span style={exportDescriptionStyle}>{canPdfExport ? 'Print-ready export' : 'Pro feature'}</span>
-                </span>
-                {!canPdfExport ? <Lock size={11} color="rgba(255,255,255,0.2)" /> : null}
-              </motion.button>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              {[
+                {
+                  icon: Code2,
+                  label: 'Copy HTML',
+                  sub: 'Standalone',
+                  locked: false,
+                  onClick: copyCode
+                },
+                {
+                  icon: FileText,
+                  label: 'Download PDF',
+                  sub: 'Pro',
+                  locked: !canPdfExport,
+                  onClick: downloadPdf
+                }
+              ].map((item) => (
+                <motion.button
+                  key={item.label}
+                  type="button"
+                  onClick={item.onClick}
+                  whileHover={{ background: item.locked ? 'rgba(255,255,255,0.03)' : 'rgba(255,255,255,0.07)' }}
+                  whileTap={{ scale: item.locked ? 1 : 0.97 }}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '10px',
+                    width: '100%',
+                    padding: '9px 10px',
+                    background: 'rgba(255,255,255,0.03)',
+                    border: '1px solid rgba(255,255,255,0.07)',
+                    borderRadius: '9px',
+                    cursor: item.locked ? 'default' : 'pointer',
+                    fontFamily: 'inherit',
+                    transition: 'background 0.15s ease'
+                  }}
+                >
+                  <item.icon size={13} color={item.locked ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.45)'} />
+                  <span
+                    style={{
+                      fontSize: '12px',
+                      fontWeight: 600,
+                      color: item.locked ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.75)',
+                      flex: 1,
+                      textAlign: 'left'
+                    }}
+                  >
+                    {item.label}
+                  </span>
+                  <span
+                    style={{
+                      fontSize: '10px',
+                      color: item.locked ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.3)',
+                      fontWeight: 500
+                    }}
+                  >
+                    {item.sub}
+                  </span>
+                  {item.locked ? <Lock size={10} color="rgba(255,255,255,0.2)" /> : null}
+                </motion.button>
+              ))}
 
               <motion.button
                 type="button"
                 onClick={saveCurrent}
                 disabled={isSaving}
-                whileHover={{ boxShadow: '0 0 24px rgba(168,85,247,0.5)', scale: 1.01 }}
+                whileHover={{ boxShadow: '0 0 20px rgba(168,85,247,0.45)' }}
                 whileTap={{ scale: 0.98 }}
                 style={{
+                  width: '100%',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  gap: '8px',
-                  padding: '12px 14px',
+                  gap: '7px',
+                  padding: '10px',
                   background: 'linear-gradient(135deg, #a855f7, #7c3aed)',
                   border: 'none',
-                  borderRadius: '10px',
+                  borderRadius: '9px',
                   color: '#fff',
                   fontSize: '13px',
                   fontWeight: 700,
                   cursor: isSaving ? 'not-allowed' : 'pointer',
                   fontFamily: 'inherit',
-                  boxShadow: '0 0 20px rgba(168,85,247,0.25)',
-                  transition: 'all 0.2s ease'
+                  boxShadow: '0 0 16px rgba(168,85,247,0.25)',
+                  transition: 'box-shadow 0.2s ease'
                 }}
               >
                 {isSaving ? (
-                  <motion.span animate={{ rotate: 360 }} transition={{ duration: 0.8, repeat: Infinity, ease: 'linear' }} style={{ width: '14px', height: '14px', border: '2px solid rgba(255,255,255,0.3)', borderTopColor: '#fff', borderRadius: '50%' }} />
+                  <motion.span animate={{ rotate: 360 }} transition={{ duration: 0.8, repeat: Infinity, ease: 'linear' }} style={{ width: '13px', height: '13px', border: '2px solid rgba(255,255,255,0.3)', borderTopColor: '#fff', borderRadius: '50%' }} />
                 ) : (
                   <>
-                    <Save size={14} />
+                    <Save size={13} />
                     Save Portfolio
                   </>
                 )}
@@ -576,34 +609,3 @@ export default function PreviewPage() {
     </main>
   );
 }
-
-const exportButtonStyle = {
-  display: 'flex',
-  alignItems: 'center',
-  gap: '10px',
-  padding: '11px 14px',
-  background: 'rgba(255,255,255,0.04)',
-  border: '1px solid rgba(255,255,255,0.09)',
-  borderRadius: '10px',
-  color: 'rgba(255,255,255,0.75)',
-  fontSize: '13px',
-  fontWeight: 600,
-  cursor: 'pointer',
-  fontFamily: 'inherit',
-  transition: 'all 0.15s ease',
-  textAlign: 'left'
-};
-
-const exportTitleStyle = {
-  display: 'block',
-  fontSize: '12px',
-  fontWeight: 600,
-  color: 'rgba(255,255,255,0.8)'
-};
-
-const exportDescriptionStyle = {
-  display: 'block',
-  fontSize: '10px',
-  color: 'rgba(255,255,255,0.3)',
-  marginTop: '1px'
-};
