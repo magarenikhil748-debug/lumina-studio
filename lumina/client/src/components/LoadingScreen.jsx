@@ -1,5 +1,6 @@
 import PropTypes from 'prop-types';
 import { motion, useReducedMotion } from 'framer-motion';
+import LuminaLogo from './LuminaLogo';
 
 export default function LoadingScreen({ message = 'Loading...', detail = '' }) {
   const reduceMotion = useReducedMotion();
@@ -20,32 +21,9 @@ export default function LoadingScreen({ message = 'Loading...', detail = '' }) {
     >
       <div className="lumina-ambient" />
       <div className="lumina-noise" />
-      <motion.div
-        animate={reduceMotion ? {} : {
-          boxShadow: [
-            '0 0 20px rgba(168,85,247,0.3)',
-            '0 0 60px rgba(168,85,247,0.6)',
-            '0 0 20px rgba(168,85,247,0.3)'
-          ]
-        }}
-        transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
-        style={{
-          width: '56px',
-          height: '56px',
-          borderRadius: '16px',
-          background: 'linear-gradient(135deg, #a855f7, #3b82f6)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          fontSize: '24px',
-          fontWeight: 700,
-          color: '#fff',
-          position: 'relative',
-          zIndex: 2
-        }}
-      >
-        L
-      </motion.div>
+      <div style={{ position: 'relative', zIndex: 2 }}>
+        <LuminaLogo size={56} showGlow />
+      </div>
 
       <div style={{ display: 'flex', gap: '6px', position: 'relative', zIndex: 2 }}>
         {[0, 1, 2].map((item) => (

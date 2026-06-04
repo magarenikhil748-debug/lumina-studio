@@ -8,6 +8,7 @@ import toast from 'react-hot-toast';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { z } from 'zod';
 import Navbar from '../components/Navbar';
+import LuminaLogo from '../components/LuminaLogo';
 import { useAuth } from '../context/AuthContext';
 
 const nameRegex = /^[A-Za-z][A-Za-z\s-]{1,99}$/;
@@ -152,7 +153,7 @@ const LoginPage = () => {
         className="glass-card mx-auto w-full max-w-md p-5 shadow-[0_0_60px_rgba(168,85,247,0.2)] sm:p-7"
       >
         <Link to="/" className="mb-6 flex items-center justify-center gap-3 text-lg font-extrabold">
-          <span className="brand-mark" aria-hidden="true"><span>L</span></span>
+          <LuminaLogo size={48} showGlow />
           <span>Lumina Studio</span>
         </Link>
 

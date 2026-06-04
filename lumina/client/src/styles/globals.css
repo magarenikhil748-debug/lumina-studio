@@ -278,12 +278,36 @@ a {
     grid-template-rows: auto 1fr;
   }
 
+  .preview-split {
+    grid-template-columns: 1fr !important;
+    grid-template-rows: auto 1fr !important;
+  }
+
+  .preview-panel {
+    position: relative !important;
+    top: auto !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    height: auto !important;
+    max-height: none !important;
+    border-right: none !important;
+    border-bottom: 1px solid rgba(255,255,255,0.07) !important;
+  }
+
   .lumina-grid-3 {
     grid-template-columns: repeat(2, 1fr) !important;
   }
 }
 
 @media (max-width: 768px) {
+  .lumina-desktop-nav {
+    display: none !important;
+  }
+
+  .lumina-mobile-btn {
+    display: flex !important;
+  }
+
   .lumina-container {
     padding: 0 16px;
   }
@@ -300,6 +324,35 @@ a {
   .lumina-page {
     padding-left: 16px !important;
     padding-right: 16px !important;
+  }
+
+  .glass-hero {
+    grid-template-columns: 1fr !important;
+    grid-template-rows: auto auto !important;
+    gap: 32px !important;
+    text-align: center !important;
+  }
+
+  .glass-avatar {
+    width: clamp(120px, 40vw, 180px) !important;
+    height: clamp(120px, 40vw, 180px) !important;
+    margin: 0 auto !important;
+  }
+
+  .glass-hero .flex {
+    justify-content: center;
+  }
+}
+
+@media (max-width: 640px) {
+  .lumina-auth-actions {
+    display: none !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .lumina-wordmark {
+    display: none !important;
   }
 }
 

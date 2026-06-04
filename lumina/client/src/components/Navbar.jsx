@@ -3,19 +3,18 @@ import { useEffect, useRef, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { AnimatePresence, motion, useMotionValueEvent, useScroll } from 'framer-motion';
 import {
-  ChevronDown,
   CreditCard,
   Eye,
   LayoutDashboard,
   LogOut,
   Menu,
   Settings,
-  Sparkles,
   Wand2,
   X
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import usePlan from '../hooks/usePlan';
+import LuminaLogo from './LuminaLogo';
 import TierBadge from './TierBadge';
 
 const normalizePlan = (value) => {
@@ -42,17 +41,15 @@ export default function Navbar({ compact = false }) {
   const { user, isAuthenticated, logout } = useAuth();
   const planState = usePlan();
   const location = useLocation();
+  const isLandingPage = location.pathname === '/';
   const [scrolled, setScrolled] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const dropdownRef = useRef(null);
   const { scrollY } = useScroll();
   const currentPlan = normalizePlan(planState.plan || user?.plan || user?.tier);
-  const isStarter = currentPlan === 'starter';
 
-  useMotionValueEvent(scrollY, 'change', (y) => {
-    setScrolled(y > 20);
-  });
+  useMotionValueEvent(scrollY, 'change', (y) => setScrolled(y > 80));
 
   useEffect(() => {
     const handler = (event) => {
@@ -85,11 +82,20 @@ export default function Navbar({ compact = false }) {
       .slice(0, 2);
   };
 
-  const avatarUrl = user?.avatar || '';
+  const glassVisible = !isLandingPage || scrolled;
+  const navBackground = glassVisible ? 'rgba(7,7,15,0.72)' : 'rgba(7,7,15,0)';
+  const navBlur = glassVisible ? 'blur(24px)' : 'blur(0px)';
+  const navBorder = glassVisible ? '1px solid rgba(255,255,255,0.07)' : '1px solid rgba(255,255,255,0)';
 
   return (
     <>
-      <header
+      <motion.nav
+        animate={{
+          backgroundColor: navBackground,
+          backdropFilter: navBlur,
+          WebkitBackdropFilter: navBlur
+        }}
+        transition={{ duration: 0.4, ease: 'easeInOut' }}
         style={{
           position: 'fixed',
           top: 0,
@@ -97,11 +103,8 @@ export default function Navbar({ compact = false }) {
           right: 0,
           height: '64px',
           zIndex: 1000,
-          background: 'rgba(7,7,15,0.7)',
-          backdropFilter: 'blur(24px)',
-          WebkitBackdropFilter: 'blur(24px)',
-          borderBottom: scrolled ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(255,255,255,0.05)',
-          transition: 'border-color 0.3s ease'
+          borderBottom: navBorder,
+          transition: 'border-color 0.4s ease'
         }}
       >
         <div
@@ -119,30 +122,15 @@ export default function Navbar({ compact = false }) {
         >
           <Link to="/" style={{ textDecoration: 'none', flexShrink: 0 }}>
             <motion.div
-              whileHover={{ scale: 1.02 }}
-              style={{ display: 'flex', alignItems: 'center', gap: '10px' }}
+              whileHover={{ scale: 1.03 }}
+              style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }}
             >
-              <div
-                style={{
-                  width: '32px',
-                  height: '32px',
-                  borderRadius: '10px',
-                  background: 'linear-gradient(135deg, #a855f7, #3b82f6)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: '14px',
-                  fontWeight: 800,
-                  color: '#fff',
-                  boxShadow: '0 0 16px rgba(168,85,247,0.4)'
-                }}
-              >
-                L
-              </div>
+              <LuminaLogo size={32} showGlow={false} />
               <span
+                className="lumina-wordmark"
                 style={{
                   fontSize: '15px',
-                  fontWeight: 700,
+                  fontWeight: 600,
                   color: '#ffffff',
                   letterSpacing: '0'
                 }}
@@ -155,40 +143,44 @@ export default function Navbar({ compact = false }) {
           <div
             className="lumina-desktop-nav"
             style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '4px',
               position: 'absolute',
               left: '50%',
-              transform: 'translateX(-50%)'
+              transform: 'translateX(-50%)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '2px'
             }}
           >
             {navLinks.map((link) => (
               <Link key={link.href} to={link.href} style={{ textDecoration: 'none' }}>
                 <motion.div
-                  whileHover={{ color: '#ffffff' }}
+                  whileHover={{ color: 'rgba(255,255,255,0.85)' }}
                   style={{
-                    padding: '6px 14px',
+                    padding: '6px 12px',
                     borderRadius: '999px',
                     fontSize: '14px',
-                    fontWeight: 550,
-                    color: isActive(link.href) ? '#ffffff' : 'rgba(255,255,255,0.55)',
-                    background: isActive(link.href) ? 'rgba(255,255,255,0.06)' : 'transparent',
-                    transition: 'color 0.2s ease, background 0.2s ease',
-                    position: 'relative'
+                    fontWeight: isActive(link.href) ? 600 : 450,
+                    color: isActive(link.href) ? '#ffffff' : 'rgba(255,255,255,0.5)',
+                    background: 'transparent',
+                    transition: 'color 0.2s ease',
+                    position: 'relative',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center'
                   }}
                 >
                   {link.label}
                   {isActive(link.href) && (
                     <motion.span
-                      layoutId="navIndicator"
+                      layoutId="navActiveDot"
+                      transition={{ type: 'spring', stiffness: 400, damping: 30 }}
                       style={{
                         position: 'absolute',
-                        bottom: '3px',
+                        bottom: '-2px',
                         left: '50%',
                         transform: 'translateX(-50%)',
-                        width: '4px',
-                        height: '4px',
+                        width: '3px',
+                        height: '3px',
                         borderRadius: '50%',
                         background: '#a855f7'
                       }}
@@ -199,28 +191,24 @@ export default function Navbar({ compact = false }) {
             ))}
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexShrink: 0 }}>
             {!isAuthenticated ? (
-              <div className="lumina-auth-actions" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <div className="lumina-auth-actions" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                 <Link to="/login" style={{ textDecoration: 'none' }}>
-                  <motion.button
-                    type="button"
-                    whileHover={{ color: '#ffffff', background: 'rgba(255,255,255,0.05)' }}
+                  <motion.span
+                    whileHover={{ color: '#ffffff' }}
                     style={{
-                      background: 'none',
-                      border: 'none',
-                      borderRadius: '999px',
-                      color: 'rgba(255,255,255,0.62)',
                       fontSize: '14px',
-                      fontWeight: 600,
+                      fontWeight: 500,
+                      color: 'rgba(255,255,255,0.55)',
                       cursor: 'pointer',
-                      padding: '8px 13px'
+                      transition: 'color 0.2s ease'
                     }}
                   >
                     Sign In
-                  </motion.button>
+                  </motion.span>
                 </Link>
-                <Link to="/login?mode=create" style={{ textDecoration: 'none' }}>
+                <Link to="/login?tab=register" style={{ textDecoration: 'none' }}>
                   <motion.button
                     type="button"
                     whileHover={{ scale: 1.03, boxShadow: '0 0 24px rgba(168,85,247,0.5)' }}
@@ -231,210 +219,161 @@ export default function Navbar({ compact = false }) {
                       borderRadius: '999px',
                       color: '#ffffff',
                       fontSize: '14px',
-                      fontWeight: 700,
+                      fontWeight: 600,
                       cursor: 'pointer',
-                      padding: '9px 18px',
+                      padding: '8px 18px',
                       boxShadow: '0 0 16px rgba(168,85,247,0.3)',
+                      fontFamily: 'inherit',
                       whiteSpace: 'nowrap'
                     }}
                   >
-                    Get Started Free
+                    Get Started
                   </motion.button>
                 </Link>
               </div>
             ) : (
-              <>
-                <TierBadge
-                  className="lumina-tier-nav"
-                  plan={currentPlan}
-                  subscriptionStatus={planState.subscriptionStatus}
-                  isOnTrial={planState.isTrialing}
-                  trialEndsAt={planState.trialEndsAt}
-                  inGracePeriod={planState.inGracePeriod}
-                  gracePeriodEndsAt={planState.gracePeriodEndsAt}
-                  size="md"
-                />
-                {isStarter && (
-                  <Link className="lumina-upgrade-nav" to="/pricing" style={{ textDecoration: 'none' }}>
-                    <motion.button
-                      type="button"
-                      whileHover={{
-                        background: 'rgba(168,85,247,0.15)',
-                        borderColor: 'rgba(168,85,247,0.5)'
-                      }}
-                      whileTap={{ scale: 0.97 }}
-                      style={{
-                        background: 'transparent',
-                        border: '1px solid rgba(168,85,247,0.3)',
-                        borderRadius: '999px',
-                        color: '#c084fc',
-                        fontSize: '13px',
-                        fontWeight: 700,
-                        cursor: 'pointer',
-                        padding: '7px 14px',
-                        transition: 'all 0.2s ease',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '5px'
-                      }}
-                    >
-                      <Sparkles size={12} />
-                      Upgrade
-                    </motion.button>
-                  </Link>
-                )}
-
-                <div ref={dropdownRef} style={{ position: 'relative' }}>
-                  <motion.button
-                    type="button"
-                    onClick={() => setDropdownOpen((open) => !open)}
-                    whileHover={{ background: 'rgba(255,255,255,0.06)' }}
-                    whileTap={{ scale: 0.97 }}
+              <div ref={dropdownRef} style={{ position: 'relative' }}>
+                <motion.button
+                  type="button"
+                  onClick={() => setDropdownOpen((open) => !open)}
+                  whileHover={{ boxShadow: '0 0 20px rgba(168,85,247,0.5)', scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  style={{
+                    width: '34px',
+                    height: '34px',
+                    borderRadius: '50%',
+                    background: 'conic-gradient(from 0deg, #a855f7, #ec4899, #3b82f6, #a855f7)',
+                    padding: '1.5px',
+                    border: 'none',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    transition: 'box-shadow 0.2s ease'
+                  }}
+                  aria-label="Open account menu"
+                  aria-expanded={dropdownOpen}
+                >
+                  <span
                     style={{
+                      width: '100%',
+                      height: '100%',
+                      borderRadius: '50%',
+                      background: 'linear-gradient(135deg, #1a0a2e, #0d0d1a)',
                       display: 'flex',
                       alignItems: 'center',
-                      gap: '8px',
-                      background: 'rgba(255,255,255,0.04)',
-                      border: '1px solid rgba(255,255,255,0.08)',
-                      borderRadius: '999px',
-                      padding: '4px 10px 4px 4px',
-                      cursor: 'pointer',
-                      transition: 'background 0.2s ease'
+                      justifyContent: 'center',
+                      overflow: 'hidden'
                     }}
-                    aria-label="Open account menu"
-                    aria-expanded={dropdownOpen}
                   >
-                    <span
-                      style={{
-                        width: '28px',
-                        height: '28px',
-                        borderRadius: '50%',
-                        background: 'linear-gradient(135deg, #a855f7, #3b82f6)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        fontSize: '11px',
-                        fontWeight: 800,
-                        color: '#fff',
-                        flexShrink: 0,
-                        overflow: 'hidden'
-                      }}
-                    >
-                      {avatarUrl ? (
-                        <img
-                          src={avatarUrl}
-                          alt=""
-                          width="28"
-                          height="28"
-                          loading="lazy"
-                          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                          onError={(event) => { event.currentTarget.style.display = 'none'; }}
-                        />
-                      ) : getInitials(user?.name)}
-                    </span>
-                    <span
-                      className="lumina-avatar-name"
-                      style={{
-                        fontSize: '13px',
-                        fontWeight: 600,
-                        color: 'rgba(255,255,255,0.86)',
-                        maxWidth: '100px',
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        whiteSpace: 'nowrap'
-                      }}
-                    >
-                      {user?.name?.split(' ')[0] || 'Account'}
-                    </span>
-                    <motion.span animate={{ rotate: dropdownOpen ? 180 : 0 }} transition={{ duration: 0.2 }}>
-                      <ChevronDown size={14} color="rgba(255,255,255,0.42)" />
-                    </motion.span>
-                  </motion.button>
+                    {user?.avatar && !user.avatar.includes('dicebear') ? (
+                      <img
+                        src={user.avatar}
+                        alt={user.name || 'Account'}
+                        width="31"
+                        height="31"
+                        loading="lazy"
+                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                      />
+                    ) : (
+                      <span style={{ fontSize: '11px', fontWeight: 700, color: '#fff', letterSpacing: '0' }}>
+                        {getInitials(user?.name)}
+                      </span>
+                    )}
+                  </span>
+                </motion.button>
 
-                  <AnimatePresence>
-                    {dropdownOpen && (
-                      <motion.div
-                        initial={{ opacity: 0, y: -8, scale: 0.96 }}
-                        animate={{ opacity: 1, y: 0, scale: 1 }}
-                        exit={{ opacity: 0, y: -8, scale: 0.96 }}
-                        transition={{ duration: 0.15, ease: 'easeOut' }}
-                        style={{
-                          position: 'absolute',
-                          top: 'calc(100% + 10px)',
-                          right: 0,
-                          width: '230px',
-                          background: 'rgba(13,13,26,0.95)',
-                          backdropFilter: 'blur(24px)',
-                          WebkitBackdropFilter: 'blur(24px)',
-                          border: '1px solid rgba(255,255,255,0.08)',
-                          borderRadius: '16px',
-                          boxShadow: '0 16px 48px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.03)',
-                          overflow: 'hidden',
-                          zIndex: 1001
-                        }}
-                      >
-                        <div style={{ padding: '14px 16px', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-                          <div style={{ fontSize: '13px', fontWeight: 700, color: '#fff', marginBottom: '2px' }}>{user?.name}</div>
-                          <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.4)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user?.email}</div>
-                          <div style={{ marginTop: '8px' }}>
-                            <TierBadge plan={currentPlan} size="sm" />
-                          </div>
+                <AnimatePresence>
+                  {dropdownOpen && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -8, scale: 0.95 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: -8, scale: 0.95 }}
+                      transition={{ duration: 0.15, ease: 'easeOut' }}
+                      style={{
+                        position: 'absolute',
+                        top: 'calc(100% + 10px)',
+                        right: 0,
+                        width: '230px',
+                        background: 'rgba(10,10,20,0.97)',
+                        backdropFilter: 'blur(32px)',
+                        WebkitBackdropFilter: 'blur(32px)',
+                        border: '1px solid rgba(255,255,255,0.08)',
+                        borderRadius: '16px',
+                        boxShadow: '0 20px 60px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.03), 0 0 40px rgba(168,85,247,0.08)',
+                        overflow: 'hidden',
+                        zIndex: 1001
+                      }}
+                    >
+                      <div style={{ padding: '14px 16px', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                        <div style={{ fontSize: '13px', fontWeight: 700, color: '#fff', marginBottom: '2px' }}>{user?.name}</div>
+                        <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.4)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user?.email}</div>
+                        <div style={{ marginTop: '8px' }}>
+                          <TierBadge
+                            plan={currentPlan}
+                            subscriptionStatus={planState.subscriptionStatus}
+                            isOnTrial={planState.isTrialing}
+                            trialEndsAt={planState.trialEndsAt}
+                            inGracePeriod={planState.inGracePeriod}
+                            gracePeriodEndsAt={planState.gracePeriodEndsAt}
+                            size="sm"
+                          />
                         </div>
-                        {menuItems.map((item) => (
-                          <Link key={item.href} to={item.href} style={{ textDecoration: 'none' }}>
-                            <motion.div
-                              whileHover={{ background: 'rgba(255,255,255,0.05)', x: 2 }}
-                              style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '10px',
-                                padding: '10px 16px',
-                                color: 'rgba(255,255,255,0.72)',
-                                fontSize: '13px',
-                                fontWeight: 600,
-                                cursor: 'pointer'
-                              }}
-                            >
-                              <item.icon size={14} />
-                              {item.label}
-                            </motion.div>
-                          </Link>
-                        ))}
-                        <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
-                          <motion.button
-                            type="button"
-                            onClick={logout}
-                            whileHover={{ background: 'rgba(239,68,68,0.08)' }}
+                      </div>
+                      {menuItems.map((item) => (
+                        <Link key={item.href} to={item.href} style={{ textDecoration: 'none' }}>
+                          <motion.div
+                            whileHover={{ background: 'rgba(255,255,255,0.05)', x: 2 }}
                             style={{
-                              width: '100%',
                               display: 'flex',
                               alignItems: 'center',
                               gap: '10px',
                               padding: '10px 16px',
-                              color: '#f87171',
+                              color: 'rgba(255,255,255,0.72)',
                               fontSize: '13px',
-                              fontWeight: 650,
-                              cursor: 'pointer',
-                              background: 'transparent',
-                              border: 'none'
+                              fontWeight: 600,
+                              cursor: 'pointer'
                             }}
                           >
-                            <LogOut size={14} />
-                            Sign Out
-                          </motion.button>
-                        </div>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                </div>
-              </>
+                            <item.icon size={14} />
+                            {item.label}
+                          </motion.div>
+                        </Link>
+                      ))}
+                      <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+                        <motion.button
+                          type="button"
+                          onClick={logout}
+                          whileHover={{ background: 'rgba(239,68,68,0.08)' }}
+                          style={{
+                            width: '100%',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '10px',
+                            padding: '10px 16px',
+                            color: '#f87171',
+                            fontSize: '13px',
+                            fontWeight: 650,
+                            cursor: 'pointer',
+                            background: 'transparent',
+                            border: 'none'
+                          }}
+                        >
+                          <LogOut size={14} />
+                          Sign Out
+                        </motion.button>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
             )}
 
             <motion.button
               type="button"
               onClick={() => setMobileOpen((open) => !open)}
               whileTap={{ scale: 0.9 }}
-              className="lumina-mobile-menu-btn"
+              className="lumina-mobile-btn"
               style={{
                 background: 'none',
                 border: 'none',
@@ -459,7 +398,7 @@ export default function Navbar({ compact = false }) {
             </motion.button>
           </div>
         </div>
-      </header>
+      </motion.nav>
 
       <AnimatePresence>
         {mobileOpen && (
@@ -505,23 +444,12 @@ export default function Navbar({ compact = false }) {
             {!isAuthenticated ? (
               <div style={{ display: 'grid', gap: '10px', marginTop: '16px' }}>
                 <Link to="/login" style={{ color: '#fff', fontWeight: 700 }}>Sign In</Link>
-                <Link to="/login?mode=create" className="btn-primary" style={{ textAlign: 'center', padding: '12px 18px', borderRadius: '999px', fontWeight: 700 }}>Get Started Free</Link>
+                <Link to="/login?tab=register" className="btn-primary" style={{ textAlign: 'center', padding: '12px 18px', borderRadius: '999px', fontWeight: 700 }}>Get Started</Link>
               </div>
             ) : null}
           </motion.div>
         )}
       </AnimatePresence>
-
-      <style>{`
-        @media (max-width: 920px) {
-          .lumina-desktop-nav { display: none !important; }
-          .lumina-mobile-menu-btn { display: inline-flex !important; }
-        }
-        @media (max-width: 720px) {
-          .lumina-auth-actions { display: none !important; }
-          .lumina-tier-nav, .lumina-upgrade-nav, .lumina-avatar-name { display: none !important; }
-        }
-      `}</style>
     </>
   );
 }

@@ -3,6 +3,7 @@ import { useEffect } from 'react';
 import { motion, useAnimationControls, useMotionValue, useReducedMotion, useSpring, useTransform } from 'framer-motion';
 import { ArrowRight, BadgeCheck, Blocks, MousePointer2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import LuminaLogo from './LuminaLogo';
 
 const insightRows = [
   ['Voice', 'Confident and human'],
@@ -156,7 +157,7 @@ const Hero = ({ onPointerMove }) => {
             </div>
             <div className="rounded-2xl border border-white/[0.08] bg-[rgba(255,255,255,0.05)] p-5 backdrop-blur-xl">
               <div className="mb-6 flex items-start gap-4">
-                <div className="brand-mark h-14 w-14 rounded-2xl"><span>L</span></div>
+                <LuminaLogo size={56} showGlow />
                 <div>
                   <p className="text-sm text-white/50">Portfolio direction</p>
                   <h2 className="mt-1 text-2xl font-extrabold text-white">Creative systems designer</h2>
