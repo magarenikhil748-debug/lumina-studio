@@ -7,15 +7,17 @@ import '@fontsource/jetbrains-mono/700.css';
 import '@fontsource/space-grotesk/500.css';
 import '@fontsource/space-grotesk/700.css';
 
-import Terminal from './developer/Terminal';
-import MinimalCode from './developer/MinimalCode';
-import Blueprint from './developer/Blueprint';
-import Runway from './designer/Runway';
-import Canvas from './designer/Canvas';
-import Studio from './designer/Studio';
-import Cosmos from './creative/Cosmos';
-import Neon from './creative/Neon';
-import Glass from './creative/Glass';
+import { lazy } from 'react';
+
+const Terminal = lazy(() => import('./developer/Terminal'));
+const MinimalCode = lazy(() => import('./developer/MinimalCode'));
+const Blueprint = lazy(() => import('./developer/Blueprint'));
+const Runway = lazy(() => import('./designer/Runway'));
+const Canvas = lazy(() => import('./designer/Canvas'));
+const Studio = lazy(() => import('./designer/Studio'));
+const Cosmos = lazy(() => import('./creative/Cosmos'));
+const Neon = lazy(() => import('./creative/Neon'));
+const Glass = lazy(() => import('./creative/Glass'));
 
 export const TEMPLATES = {
   terminal: {
@@ -111,7 +113,7 @@ export const TEMPLATES = {
     name: 'Glass',
     category: 'creative',
     description: 'Premium glassmorphism with aurora motion and frosted content.',
-    tier: 'studio',
+    tier: 'free',
     component: Glass,
     thumbnail: '/thumbnails/glass.png',
     colors: ['#0f0c29', '#a855f7', '#3b82f6'],
@@ -119,7 +121,7 @@ export const TEMPLATES = {
   }
 };
 
-export const FREE_TEMPLATES = ['minimal', 'bold', 'creative'];
+export const FREE_TEMPLATES = ['glass'];
 
 export function getTemplate(id) {
   return TEMPLATES[id] || TEMPLATES.glass;
@@ -132,7 +134,7 @@ export function getTemplatesByCategory(category) {
 export function getTemplatesByTier(tier) {
   if (tier === 'studio') return Object.values(TEMPLATES);
   if (tier === 'pro') return Object.values(TEMPLATES).filter((template) => template.tier !== 'studio');
-  return [];
+  return Object.values(TEMPLATES).filter((template) => template.tier === 'free');
 }
 
 export function canUseTemplate(template, tier = 'starter') {

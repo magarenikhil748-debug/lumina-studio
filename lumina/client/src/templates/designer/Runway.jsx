@@ -1,53 +1,14 @@
 import { memo, useRef } from 'react';
 import PropTypes from 'prop-types';
-import { motion, useMotionValue, useReducedMotion, useScroll, useSpring, useTransform } from 'framer-motion';
+import { motion, useReducedMotion, useScroll, useTransform } from 'framer-motion';
 import TemplateBase from '../shared/TemplateBase';
 import AnimatedSection from '../shared/AnimatedSection';
 import ContactRow from '../shared/ContactRow';
+import GenerativeAvatar from '../shared/GenerativeAvatar';
+import MagneticButton from '../shared/MagneticButton';
+import NoiseTexture from '../shared/NoiseTexture';
 import ProjectCard from '../shared/ProjectCard';
-import { clampProjects, clampSkills, getBio, getPhotoUrl } from '../shared/templateData';
-
-const MagneticButton = ({ children, href }) => {
-  const ref = useRef(null);
-  const x = useMotionValue(0);
-  const y = useMotionValue(0);
-  const springX = useSpring(x, { stiffness: 300, damping: 20 });
-  const springY = useSpring(y, { stiffness: 300, damping: 20 });
-
-  const handleMouseMove = (event) => {
-    const rect = ref.current?.getBoundingClientRect();
-    if (!rect) return;
-    const centerX = rect.left + rect.width / 2;
-    const centerY = rect.top + rect.height / 2;
-    x.set((event.clientX - centerX) * 0.28);
-    y.set((event.clientY - centerY) * 0.28);
-  };
-
-  const reset = () => {
-    x.set(0);
-    y.set(0);
-  };
-
-  return (
-    <motion.a
-      ref={ref}
-      href={href}
-      target={href?.startsWith('mailto:') ? undefined : '_blank'}
-      rel={href?.startsWith('mailto:') ? undefined : 'noreferrer'}
-      style={{ x: springX, y: springY }}
-      onMouseMove={handleMouseMove}
-      onMouseLeave={reset}
-      className="inline-flex rounded-full bg-[#111] px-6 py-4 text-sm font-black uppercase tracking-[0.18em] text-white"
-    >
-      {children}
-    </motion.a>
-  );
-};
-
-MagneticButton.propTypes = {
-  children: PropTypes.node.isRequired,
-  href: PropTypes.string.isRequired
-};
+import { clampProjects, clampSkills, getBio } from '../shared/templateData';
 
 const SplitName = ({ name }) => {
   const reduceMotion = useReducedMotion();
@@ -93,6 +54,7 @@ const Runway = memo(({ portfolio }) => {
   return (
     <TemplateBase portfolio={portfolio} fontFamily="'Space Grotesk', Inter, sans-serif" className="bg-[#faf7f0] text-[#111]">
       <main className="overflow-hidden bg-[#faf7f0] text-[#111]">
+        <NoiseTexture opacity={0.022} blendMode="multiply" />
         <section className="relative grid min-h-screen gap-8 px-5 py-16 sm:px-10 lg:grid-cols-[1.1fr_0.9fr] lg:px-16">
           <div className="self-end">
             <p className="mb-5 font-black uppercase tracking-[0.32em] text-[var(--color-accent)]">Portfolio editorial</p>
@@ -102,14 +64,20 @@ const Runway = memo(({ portfolio }) => {
           </div>
           <motion.div style={{ y: reduceMotion ? 0 : photoY }} className="relative self-center justify-self-center">
             <div className="absolute -inset-8 bg-[var(--color-accent)]" />
-            <img
-              src={getPhotoUrl(portfolio)}
-              alt={portfolio.name || 'Profile'}
-              width="520"
-              height="640"
-              loading="lazy"
-              className="relative h-[min(70vh,640px)] w-[min(78vw,520px)] object-cover grayscale"
-            />
+            {portfolio.photoUrl ? (
+              <img
+                src={portfolio.photoUrl}
+                alt={portfolio.name || 'Profile'}
+                width="520"
+                height="640"
+                loading="lazy"
+                className="relative h-[min(70vh,640px)] w-[min(78vw,520px)] object-cover grayscale"
+              />
+            ) : (
+              <div className="relative grid h-[min(70vh,640px)] w-[min(78vw,520px)] place-items-center overflow-hidden bg-[#111]">
+                <GenerativeAvatar name={portfolio.name} size="82%" />
+              </div>
+            )}
           </motion.div>
         </section>
 
@@ -131,7 +99,12 @@ const Runway = memo(({ portfolio }) => {
           <div className="sticky top-0 overflow-hidden px-5 py-16 sm:px-10 lg:px-16">
             <div className="mb-8 flex items-end justify-between gap-6">
               <h2 className="text-[clamp(3rem,8vw,8rem)] font-black uppercase leading-none">Work</h2>
-              <MagneticButton href={portfolio.email ? `mailto:${portfolio.email}` : '#contact'}>Start a conversation</MagneticButton>
+              <MagneticButton
+                href={portfolio.email ? `mailto:${portfolio.email}` : '#contact'}
+                className="inline-flex rounded-full bg-[#111] px-6 py-4 text-sm font-black uppercase tracking-[0.18em] text-white"
+              >
+                Start a conversation
+              </MagneticButton>
             </div>
             <motion.div style={{ x: reduceMotion ? 0 : x }} className="flex flex-col gap-6 md:w-max md:flex-row md:gap-8">
               {projects.map((project, index) => (
@@ -170,6 +143,7 @@ Runway.propTypes = {
     name: PropTypes.string,
     tagline: PropTypes.string,
     email: PropTypes.string,
+    photoUrl: PropTypes.string,
     skills: PropTypes.array,
     projects: PropTypes.array,
     colorPalette: PropTypes.object

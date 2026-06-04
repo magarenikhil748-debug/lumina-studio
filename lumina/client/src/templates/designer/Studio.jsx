@@ -3,6 +3,7 @@ import PropTypes from 'prop-types';
 import { motion, useInView, useReducedMotion, useScroll, useTransform } from 'framer-motion';
 import TemplateBase from '../shared/TemplateBase';
 import ContactRow from '../shared/ContactRow';
+import NoiseTexture from '../shared/NoiseTexture';
 import { clampProjects, clampSkills, getBio } from '../shared/templateData';
 
 const CountUp = ({ end }) => {
@@ -98,6 +99,7 @@ const Studio = memo(({ portfolio }) => {
   return (
     <TemplateBase portfolio={portfolio} fontFamily="'Space Grotesk', Inter, sans-serif" className="bg-[#f5f5f0] text-[#1c1c1e]">
       <main className="relative bg-[#f5f5f0] text-[#1c1c1e]">
+        <NoiseTexture opacity={0.025} blendMode="multiply" />
         <nav className="lumina-no-print fixed left-1/2 top-4 z-40 flex -translate-x-1/2 gap-2 rounded-full border border-black/10 bg-[#f5f5f0]/80 p-2 shadow-sm backdrop-blur-xl">
           {nav.map(([id, label]) => (
             <a key={id} href={`#${id}`} className={`rounded-full px-4 py-2 text-xs font-black uppercase tracking-[0.16em] transition ${active === id ? 'bg-[#1c1c1e] text-white' : 'text-[#1c1c1e]/45'}`}>

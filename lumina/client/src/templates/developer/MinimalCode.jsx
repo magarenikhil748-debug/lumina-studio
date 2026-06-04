@@ -4,6 +4,7 @@ import { motion, useReducedMotion, useScroll, useSpring } from 'framer-motion';
 import TemplateBase from '../shared/TemplateBase';
 import AnimatedSection from '../shared/AnimatedSection';
 import ContactRow from '../shared/ContactRow';
+import NoiseTexture from '../shared/NoiseTexture';
 import ProjectCard from '../shared/ProjectCard';
 import { clampProjects, clampSkills, getBio, randomFromString } from '../shared/templateData';
 
@@ -64,6 +65,7 @@ const MinimalCode = memo(({ portfolio }) => {
   return (
     <TemplateBase portfolio={portfolio} fontFamily="'JetBrains Mono', monospace" className="bg-[#fbfbfd] text-zinc-950">
       <main className="relative min-h-screen bg-[#fbfbfd] px-5 py-16 text-zinc-950 sm:px-8 lg:px-16">
+        <NoiseTexture opacity={0.018} blendMode="multiply" />
         <div className="lumina-no-print fixed left-5 top-24 z-20 hidden h-[70vh] w-px bg-zinc-200 lg:block">
           <motion.div className="h-full w-px origin-top bg-[var(--color-primary)]" style={{ scaleY: progress }} />
           <motion.div className="absolute left-1/2 top-0 h-3 w-3 -translate-x-1/2 rounded-full bg-[var(--color-primary)]" style={{ y: progress }} />

@@ -3,6 +3,8 @@ import PropTypes from 'prop-types';
 import { motion, useReducedMotion, useScroll, useTransform } from 'framer-motion';
 import TemplateBase from '../shared/TemplateBase';
 import ContactRow from '../shared/ContactRow';
+import CursorGlow from '../shared/CursorGlow';
+import NoiseTexture from '../shared/NoiseTexture';
 import ProjectCard from '../shared/ProjectCard';
 import { clampProjects, clampSkills, getBio } from '../shared/templateData';
 
@@ -15,7 +17,7 @@ const Cosmos = memo(({ portfolio }) => {
   const layer2 = useTransform(scrollY, [0, 1000], [0, -100]);
   const layer3 = useTransform(scrollY, [0, 1000], [0, -200]);
   const projects = clampProjects(portfolio.projects);
-  const skills = clampSkills(portfolio.skills).slice(0, 10);
+  const skills = clampSkills(portfolio.skills).slice(0, 8);
 
   useEffect(() => {
     const onVisibility = () => setVisible(!document.hidden);
@@ -39,13 +41,15 @@ const Cosmos = memo(({ portfolio }) => {
 
   const nodes = skills.map((skill, index) => ({
     ...skill,
-    x: 10 + (index % 5) * 20,
-    y: 18 + Math.floor(index / 5) * 42
+    x: 12 + (index % 4) * 25,
+    y: 24 + Math.floor(index / 4) * 50
   }));
 
   return (
     <TemplateBase portfolio={portfolio} fontFamily="'Space Grotesk', Inter, sans-serif" className="bg-[#03001c] text-white">
       <main className="relative min-h-screen overflow-hidden bg-[#03001c] px-5 py-16 text-white sm:px-8 lg:px-16">
+        <CursorGlow color="rgba(236,72,153,0.14)" size={460} blur={82} />
+        <NoiseTexture opacity={0.04} blendMode="screen" />
         <div className="pointer-events-none fixed inset-0">
           {stars.map((star) => (
             <motion.div
@@ -92,8 +96,8 @@ const Cosmos = memo(({ portfolio }) => {
             <p className="mt-6 max-w-3xl leading-8 text-white/55">{getBio(portfolio)}</p>
             <ContactRow portfolio={portfolio} className="mt-8" linkClassName="border border-white/10 bg-white/[0.06] text-white" />
           </motion.div>
-          <motion.div style={{ y: reduceMotion ? 0 : layer2 }} className="relative min-h-[360px] rounded-full border border-white/10 bg-white/[0.04] p-8 shadow-[0_0_90px_rgba(168,85,247,0.18)] backdrop-blur-xl">
-            <svg className="absolute inset-0 h-full w-full" aria-hidden="true">
+          <motion.div style={{ y: reduceMotion ? 0 : layer2 }} className="cosmos-constellation relative min-h-[360px] rounded-full border border-white/10 bg-white/[0.04] p-8 shadow-[0_0_90px_rgba(168,85,247,0.18)] backdrop-blur-xl">
+            <svg className="cosmos-constellation-lines absolute inset-0 h-full w-full" aria-hidden="true">
               {nodes.slice(0, -1).map((node, index) => {
                 const next = nodes[index + 1];
                 return (
@@ -113,7 +117,7 @@ const Cosmos = memo(({ portfolio }) => {
             {nodes.map((skill, index) => (
               <motion.span
                 key={skill.name}
-                className="absolute rounded-full bg-white px-3 py-1 text-xs font-black text-[#03001c] shadow-[0_0_24px_rgba(255,255,255,0.45)]"
+                className="cosmos-skill-node absolute max-w-[128px] rounded-full bg-white px-3 py-1 text-center text-xs font-black leading-tight text-[#03001c] shadow-[0_0_24px_rgba(255,255,255,0.45)]"
                 style={{ left: `${skill.x}%`, top: `${skill.y}%`, transform: 'translate(-50%, -50%)' }}
                 whileHover={{ scale: 1.12, boxShadow: '0 0 34px rgba(236,72,153,0.55)' }}
                 initial={{ opacity: 0, scale: 0.8 }}
@@ -141,6 +145,24 @@ const Cosmos = memo(({ portfolio }) => {
             ))}
           </div>
         </motion.section>
+        <style>{`
+          @media (max-width: 767px) {
+            .cosmos-constellation {
+              display: flex;
+              min-height: 0;
+              flex-wrap: wrap;
+              align-content: center;
+              justify-content: center;
+              gap: 10px;
+              border-radius: 28px;
+            }
+            .cosmos-constellation-lines { display: none; }
+            .cosmos-skill-node {
+              position: static !important;
+              transform: none !important;
+            }
+          }
+        `}</style>
       </main>
     </TemplateBase>
   );

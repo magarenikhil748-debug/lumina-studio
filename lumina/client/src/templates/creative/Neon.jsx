@@ -3,6 +3,8 @@ import PropTypes from 'prop-types';
 import { motion, useReducedMotion } from 'framer-motion';
 import TemplateBase from '../shared/TemplateBase';
 import ContactRow from '../shared/ContactRow';
+import CursorGlow from '../shared/CursorGlow';
+import NoiseTexture from '../shared/NoiseTexture';
 import ProjectCard from '../shared/ProjectCard';
 import { clampProjects, clampSkills, getBio } from '../shared/templateData';
 
@@ -70,6 +72,8 @@ const Neon = memo(({ portfolio }) => {
         transition={{ duration: 0.7 }}
         className="relative min-h-screen overflow-hidden bg-[#0d0d0d] px-5 py-16 text-white sm:px-8 lg:px-16"
       >
+        <CursorGlow color="rgba(0,255,255,0.12)" size={390} blur={55} />
+        <NoiseTexture opacity={0.04} blendMode="screen" />
         <div className="pointer-events-none fixed inset-0 bg-[linear-gradient(rgba(255,255,255,0.035)_1px,transparent_1px)] bg-[length:100%_5px]" />
         <section className="relative z-10 mx-auto grid min-h-[86vh] max-w-7xl gap-10 lg:grid-cols-[1fr_0.8fr] lg:items-center">
           <div>

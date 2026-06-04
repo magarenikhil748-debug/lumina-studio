@@ -4,6 +4,8 @@ import { motion, useReducedMotion } from 'framer-motion';
 import TemplateBase from '../shared/TemplateBase';
 import AnimatedSection from '../shared/AnimatedSection';
 import ContactRow from '../shared/ContactRow';
+import CursorGlow from '../shared/CursorGlow';
+import NoiseTexture from '../shared/NoiseTexture';
 import ProjectCard from '../shared/ProjectCard';
 import { clampProjects, clampSkills, getBio, randomFromString } from '../shared/templateData';
 
@@ -103,6 +105,8 @@ const Terminal = memo(({ portfolio }) => {
       `}</style>
       <main className="terminal-scanline relative min-h-screen overflow-hidden bg-[#0a0a0f] px-5 py-16 text-[#d7ffe1] sm:px-8 lg:px-14">
         <MatrixRain active={!reduceMotion && isVisible} />
+        <CursorGlow color="rgba(0,255,65,0.12)" size={360} blur={58} />
+        <NoiseTexture opacity={0.03} blendMode="screen" />
         <section className="relative z-10 mx-auto grid max-w-7xl gap-12 lg:grid-cols-[0.9fr_1.1fr] lg:items-center">
           <div>
             <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-sm font-black text-[#00ff41]/75">lumina@portfolio:~$ initialize</motion.p>

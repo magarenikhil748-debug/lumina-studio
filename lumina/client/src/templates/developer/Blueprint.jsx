@@ -4,6 +4,8 @@ import { motion, useReducedMotion } from 'framer-motion';
 import TemplateBase from '../shared/TemplateBase';
 import AnimatedSection from '../shared/AnimatedSection';
 import ContactRow from '../shared/ContactRow';
+import CursorGlow from '../shared/CursorGlow';
+import NoiseTexture from '../shared/NoiseTexture';
 import ProjectCard from '../shared/ProjectCard';
 import { clampProjects, clampSkills, getBio } from '../shared/templateData';
 
@@ -42,6 +44,8 @@ const Blueprint = memo(({ portfolio }) => {
           backgroundSize: '40px 40px'
         }}
       >
+        <CursorGlow color="rgba(74,144,217,0.14)" size={390} blur={62} />
+        <NoiseTexture opacity={0.035} blendMode="screen" />
         <section className="mx-auto grid min-h-[82vh] max-w-7xl gap-10 lg:grid-cols-[1fr_320px] lg:items-center">
           <div>
             <p className="font-mono text-sm font-black uppercase tracking-[0.34em] text-[#78b9ff]">Spec 00 - Profile</p>

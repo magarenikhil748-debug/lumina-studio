@@ -4,6 +4,7 @@ import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { X } from 'lucide-react';
 import TemplateBase from '../shared/TemplateBase';
 import ContactRow from '../shared/ContactRow';
+import NoiseTexture from '../shared/NoiseTexture';
 import SkillTag from '../shared/SkillTag';
 import { clampProjects, clampSkills, getBio } from '../shared/templateData';
 
@@ -31,6 +32,7 @@ const Canvas = memo(({ portfolio }) => {
   return (
     <TemplateBase portfolio={portfolio} fontFamily="'Inter', sans-serif" className="bg-[#fffef7] text-[#2d2d2d]">
       <main className="min-h-screen bg-[#fffef7] px-5 py-16 text-[#2d2d2d] sm:px-8 lg:px-16" onMouseMove={handleMouseMove}>
+        <NoiseTexture opacity={0.025} blendMode="multiply" />
         <AnimatePresence>
           {splashes.map((splash) => (
             <motion.div
