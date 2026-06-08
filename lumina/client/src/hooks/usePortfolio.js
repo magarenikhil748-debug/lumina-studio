@@ -1,16 +1,25 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 import { portfolioAPI } from '../utils/api';
 import { calculateQuality, defaultDraft } from '../utils/helpers';
+
+const showSaveError = (message) => {
+  toast.error(message, { id: `portfolio-save-error:${message}` });
+};
 
 export const usePortfolio = () => {
   const [portfolio, setPortfolio] = useState(defaultDraft);
   const [isSaving, setIsSaving] = useState(false);
   const [savedPortfolio, setSavedPortfolio] = useState(null);
+  const savingRef = useRef(false);
 
   const updateLocalPortfolio = (patch) => setPortfolio((current) => ({ ...current, ...patch }));
 
-  const save = async (payload = portfolio) => {
+  const save = async (payload = portfolio, options = {}) => {
+    if (savingRef.current) return null;
+
+    const { showToasts = true } = options;
+    savingRef.current = true;
     setIsSaving(true);
     try {
       const quality = calculateQuality(payload);
@@ -21,12 +30,14 @@ export const usePortfolio = () => {
         : await portfolioAPI.create(completePayload);
       setSavedPortfolio(saved);
       setPortfolio(saved);
-      toast.success('Portfolio saved and ready to share');
+      if (showToasts) toast.success('Portfolio saved and ready to share', { id: 'portfolio-save-success' });
       return saved;
     } catch (err) {
-      toast.error(err.response?.data?.error || err.response?.data?.message || 'Could not save portfolio');
+      const message = err.response?.data?.error || err.response?.data?.message || 'Could not save portfolio';
+      if (showToasts) showSaveError(message);
       return null;
     } finally {
+      savingRef.current = false;
       setIsSaving(false);
     }
   };

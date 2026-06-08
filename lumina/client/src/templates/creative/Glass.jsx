@@ -39,27 +39,36 @@ const getSkillCategory = (skill) => {
   return 'craft';
 };
 
-const GlassName = ({ name, reduceMotion }) => (
-  <motion.h1
-    variants={{ hidden: {}, visible: { transition: { staggerChildren: reduceMotion ? 0 : 0.03 } } }}
-    initial="hidden"
-    animate="visible"
-    className="mt-7 max-w-5xl text-[clamp(3rem,7.4vw,7.6rem)] font-black leading-[0.88] tracking-tight"
-  >
-    {String(name || 'Lumina').split('').map((letter, index) => (
-      <motion.span
-        key={`${letter}-${index}`}
-        variants={{
-          hidden: reduceMotion ? { opacity: 1, y: 0 } : { opacity: 0, y: 24 },
-          visible: { opacity: 1, y: 0, transition: { duration: 0.42, ease: [0.22, 1, 0.36, 1] } }
-        }}
-        style={{ display: 'inline-block', willChange: 'transform, opacity' }}
-      >
-        {letter === ' ' ? '\u00a0' : letter}
-      </motion.span>
-    ))}
-  </motion.h1>
-);
+const GlassName = ({ name, reduceMotion }) => {
+  const words = String(name || 'Lumina').trim().split(/\s+/).filter(Boolean);
+
+  return (
+    <motion.h1
+      variants={{ hidden: {}, visible: { transition: { staggerChildren: reduceMotion ? 0 : 0.03 } } }}
+      initial="hidden"
+      animate="visible"
+      className="glass-name-lockup mt-7 max-w-5xl text-[clamp(2.75rem,6.7vw,7.2rem)] font-black leading-[0.92] tracking-tight"
+    >
+      {words.map((word, wordIndex) => (
+        <span key={`${word}-${wordIndex}`} className="glass-name-word">
+          {word.split('').map((letter, letterIndex) => (
+            <motion.span
+              key={`${word}-${letter}-${letterIndex}`}
+              variants={{
+                hidden: reduceMotion ? { opacity: 1, y: 0 } : { opacity: 0, y: 24 },
+                visible: { opacity: 1, y: 0, transition: { duration: 0.42, ease: [0.22, 1, 0.36, 1] } }
+              }}
+              style={{ display: 'inline-block', willChange: 'transform, opacity' }}
+            >
+              {letter}
+            </motion.span>
+          ))}
+          {wordIndex < words.length - 1 ? <span aria-hidden="true">&nbsp;</span> : null}
+        </span>
+      ))}
+    </motion.h1>
+  );
+};
 
 GlassName.propTypes = {
   name: PropTypes.string,
@@ -92,6 +101,7 @@ const Glass = memo(({ portfolio }) => {
   const reduceMotion = useReducedMotion();
   const { parallaxY, scrollProgress } = useTemplateMotion();
   const projects = clampProjects(portfolio.projects);
+  const featuredProject = projects[0];
   const skills = clampSkills(portfolio.skills);
   const heroY = useTransform(scrollProgress, [0, 0.24], [0, 120]);
   const heroOpacity = useTransform(scrollProgress, [0, 0.2], [1, 0]);
@@ -184,11 +194,21 @@ const Glass = memo(({ portfolio }) => {
               Living portfolio
             </motion.div>
             <GlassName name={portfolio.name} reduceMotion={Boolean(reduceMotion)} />
+            {portfolio.title ? (
+              <motion.p
+                initial={reduceMotion ? false : { opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.55, delay: reduceMotion ? 0 : 0.14 }}
+                className="glass-role-line mt-5 max-w-2xl text-[clamp(0.82rem,1.25vw,1.05rem)] font-black uppercase tracking-[0.18em] text-[#c084fc]"
+              >
+                {portfolio.title}
+              </motion.p>
+            ) : null}
             <motion.p
               initial={reduceMotion ? false : { opacity: 0, y: 18 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.65, delay: reduceMotion ? 0 : 0.2 }}
-              className="mt-7 max-w-3xl text-[clamp(1.15rem,2vw,1.7rem)] font-bold leading-[1.4] text-white/78"
+              className="glass-tagline mt-7 max-w-3xl text-[clamp(1.15rem,2vw,1.7rem)] font-bold leading-[1.4] text-white/78"
             >
               {portfolio.tagline}
             </motion.p>
@@ -196,7 +216,7 @@ const Glass = memo(({ portfolio }) => {
               initial={reduceMotion ? false : { opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.65, delay: reduceMotion ? 0 : 0.3 }}
-              className="mt-6 max-w-2xl text-sm leading-7 text-white/48"
+              className="glass-bio mt-6 max-w-2xl text-sm leading-7 text-white/48"
             >
               {getBio(portfolio)}
             </motion.p>
@@ -223,7 +243,7 @@ const Glass = memo(({ portfolio }) => {
             transition={{ duration: 0.9, delay: reduceMotion ? 0 : 0.18, ease: [0.22, 1, 0.36, 1] }}
             style={{
               y: reduceMotion ? 0 : avatarY,
-              width: 'clamp(176px, 25vw, 330px)',
+              width: 'clamp(156px, 24cqw, 330px)',
               aspectRatio: '1'
             }}
           >
@@ -263,6 +283,18 @@ const Glass = memo(({ portfolio }) => {
               <Layers3 className="h-4 w-4 text-[#c084fc]" />
               Multidisciplinary
             </motion.div>
+            {featuredProject ? (
+              <motion.div
+                className="glass-featured-impact absolute -right-12 top-[58%] w-[min(260px,68vw)] rounded-2xl border border-white/[0.13] bg-[#100d24]/78 p-4 text-left shadow-[0_24px_70px_rgba(0,0,0,0.34)] backdrop-blur-2xl"
+                initial={reduceMotion ? false : { opacity: 0, y: 18, scale: 0.94 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                transition={{ duration: 0.68, delay: reduceMotion ? 0 : 0.5, ease: [0.22, 1, 0.36, 1] }}
+              >
+                <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#93c5fd]">Featured build</p>
+                <p className="mt-2 line-clamp-2 text-sm font-black leading-tight text-white">{featuredProject.title}</p>
+                <p className="mt-2 line-clamp-2 text-xs leading-5 text-white/48">{featuredProject.description}</p>
+              </motion.div>
+            ) : null}
           </motion.div>
         </section>
 
@@ -448,7 +480,8 @@ const Glass = memo(({ portfolio }) => {
         <style>{`
           .glass-experience-hero {
             grid-template-areas: "copy avatar";
-            grid-template-columns: minmax(0, 1fr) auto;
+            grid-template-columns: minmax(0, 1.12fr) minmax(160px, 0.5fr);
+            container-type: inline-size;
           }
           .glass-experience-copy { grid-area: copy; }
           .glass-experience-avatar { grid-area: avatar; }
@@ -456,12 +489,76 @@ const Glass = memo(({ portfolio }) => {
             min-width: 0;
             max-width: 100%;
           }
+          .glass-name-lockup,
+          .glass-role-line {
+            word-break: keep-all;
+            overflow-wrap: normal;
+            text-wrap: balance;
+          }
+          .glass-name-word {
+            display: inline-block;
+            white-space: nowrap;
+          }
+          .glass-tagline {
+            font-size: clamp(1.05rem, 3.1cqw, 1.55rem);
+            word-break: keep-all;
+            overflow-wrap: normal;
+            text-wrap: balance;
+          }
+          .glass-bio {
+            font-size: clamp(0.82rem, 1.85cqw, 0.95rem);
+          }
+          .glass-featured-impact {
+            transform: translate3d(0, 0, 0);
+            will-change: transform, opacity;
+          }
+          .glass-featured-impact .line-clamp-2 {
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+          }
           .glass-experience-copy a {
             max-width: 100%;
           }
           .glass-experience-copy a span {
             min-width: 0;
             overflow-wrap: anywhere;
+          }
+          @container (max-width: 820px) {
+            .glass-experience-copy {
+              grid-column: 1 / -1;
+              grid-row: 1;
+              width: min(430px, 70cqw);
+              overflow: visible;
+            }
+            .glass-experience-avatar {
+              grid-column: 1 / -1;
+              grid-row: 1;
+              justify-self: end;
+              align-self: end;
+              opacity: 0.92;
+              width: clamp(142px, 28cqw, 220px) !important;
+            }
+            .glass-name-lockup {
+              font-size: clamp(2.35rem, 10.5cqw, 4.9rem);
+              line-height: 0.96;
+            }
+            .glass-role-line {
+              letter-spacing: 0.12em;
+            }
+            .glass-tagline {
+              font-size: clamp(1.02rem, 4.2cqw, 1.32rem);
+              max-width: 360px;
+            }
+            .glass-bio {
+              max-width: 300px;
+            }
+            .glass-featured-impact {
+              right: 0 !important;
+              top: auto !important;
+              bottom: -28px;
+            }
           }
           @media (max-width: 760px) {
             .glass-experience-hero {
@@ -475,6 +572,21 @@ const Glass = memo(({ portfolio }) => {
             .glass-experience-copy {
               width: calc(100vw - 40px);
               overflow: hidden;
+            }
+            #glass-hero {
+              min-height: auto !important;
+              padding-top: 32px !important;
+              padding-bottom: 54px !important;
+            }
+            .glass-tagline {
+              font-size: clamp(1.05rem, 6vw, 1.35rem);
+            }
+            .glass-featured-impact {
+              position: relative !important;
+              right: auto !important;
+              top: auto !important;
+              width: 100% !important;
+              margin-top: 18px;
             }
           }
         `}</style>

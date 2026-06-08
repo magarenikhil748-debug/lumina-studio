@@ -13,12 +13,12 @@ export const useGemini = () => {
     try {
       const result = await generatePortfolio(payload);
       setGeneration(result);
-      toast.success(result.metadata?.fallback ? 'Fallback content generated' : 'AI direction generated');
+      toast.success(result.metadata?.fallback ? 'Fallback content generated' : 'AI direction generated', { id: 'gemini-generate-success' });
       return result;
     } catch (err) {
       const message = err.response?.data?.error || err.response?.data?.message || 'Generation took too long. Try again in a moment.';
       setError(message);
-      toast.error(message);
+      toast.error(message, { id: `gemini-generate-error:${message}` });
       return null;
     } finally {
       setIsGenerating(false);

@@ -116,16 +116,16 @@ function WorldSelectorButton({
       onMouseLeave={onPreviewEnd}
       onFocus={onPreviewStart}
       onBlur={onPreviewEnd}
-      whileHover={reduceMotion ? undefined : { y: locked ? 0 : -2 }}
+      whileHover={reduceMotion ? undefined : { y: -2 }}
       whileTap={reduceMotion ? undefined : { scale: locked ? 1 : 0.98 }}
       aria-label={`${locked ? 'Locked ' : ''}${world.label}`}
       style={{
         width: '100%',
         display: 'grid',
-        gridTemplateColumns: '64px minmax(0, 1fr) auto',
+        gridTemplateColumns: '56px minmax(0, 1fr) auto',
         alignItems: 'center',
-        gap: '10px',
-        padding: '8px',
+        gap: '9px',
+        padding: '7px',
         borderRadius: '14px',
         border: selected
           ? '1px solid rgba(192,132,252,0.82)'
@@ -137,9 +137,9 @@ function WorldSelectorButton({
           : previewing
             ? 'rgba(255,255,255,0.065)'
             : 'rgba(255,255,255,0.035)',
-        boxShadow: selected ? '0 0 22px rgba(168,85,247,0.24)' : 'none',
+        boxShadow: selected ? '0 0 22px rgba(168,85,247,0.24)' : locked ? 'inset 0 0 0 1px rgba(255,255,255,0.015)' : 'none',
         color: '#fff',
-        cursor: locked ? 'not-allowed' : 'pointer',
+        cursor: 'pointer',
         textAlign: 'left',
         fontFamily: 'inherit',
         transition: 'background 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease'
@@ -147,11 +147,12 @@ function WorldSelectorButton({
     >
       <span
         style={{
-          height: '58px',
-          borderRadius: '11px',
+          height: '52px',
+          borderRadius: '10px',
           overflow: 'hidden',
           border: '1px solid rgba(255,255,255,0.08)',
-          opacity: locked ? 0.5 : 1
+          opacity: locked ? 0.64 : 1,
+          filter: locked ? 'saturate(0.76)' : 'none'
         }}
       >
         <TemplateWorldScene templateId={template.id} compact />
@@ -160,7 +161,7 @@ function WorldSelectorButton({
         <span
           style={{
             display: 'block',
-            fontSize: '9px',
+            fontSize: '8px',
             fontWeight: 800,
             letterSpacing: '0.12em',
             textTransform: 'uppercase',
@@ -172,7 +173,7 @@ function WorldSelectorButton({
         <span
           style={{
             display: 'block',
-            marginTop: '3px',
+            marginTop: '2px',
             fontSize: '12px',
             fontWeight: 800,
             color: '#fff',
@@ -187,7 +188,7 @@ function WorldSelectorButton({
         <span
           style={{
             display: 'block',
-            marginTop: '3px',
+            marginTop: '2px',
             fontSize: '10px',
             color: 'rgba(255,255,255,0.42)',
             overflow: 'hidden',
@@ -306,7 +307,7 @@ export default function PreviewPage() {
   const copyCode = async () => {
     await navigator.clipboard.writeText(buildStandaloneHtml(portfolio));
     if (portfolio.slug) await trackPortfolioExport(portfolio.slug).catch(() => null);
-    toast.success('Standalone HTML copied');
+    toast.success('Standalone HTML copied', { id: 'preview-copy-html' });
   };
 
   const downloadPdf = () => {
@@ -318,6 +319,7 @@ export default function PreviewPage() {
   };
 
   const saveCurrent = async () => {
+    if (isSaving) return;
     if (!isAuthenticated) {
       setShowAuthPrompt(true);
       return;
@@ -791,7 +793,19 @@ export default function PreviewPage() {
                   {activeTemplateIsPreview ? 'Previewing before selection' : 'Active template'}
                 </span>
               </div>
-              <h2 style={{ fontSize: 'clamp(32px, 4.4vw, 58px)', lineHeight: 0.96, fontWeight: 900, letterSpacing: '0', color: activeWorld.colors.text, maxWidth: '680px' }}>
+              <h2
+                style={{
+                  fontSize: 'clamp(30px, 3.9vw, 50px)',
+                  lineHeight: 1.02,
+                  fontWeight: 900,
+                  letterSpacing: '0',
+                  color: activeWorld.colors.text,
+                  maxWidth: '640px',
+                  wordBreak: 'keep-all',
+                  overflowWrap: 'normal',
+                  textWrap: 'balance'
+                }}
+              >
                 {activeWorld.headline}
               </h2>
               <p style={{ marginTop: '18px', maxWidth: '580px', fontSize: 'clamp(14px, 1.5vw, 17px)', lineHeight: 1.65, color: activeWorld.colors.muted }}>
