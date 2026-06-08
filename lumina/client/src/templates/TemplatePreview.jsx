@@ -1,59 +1,82 @@
 import PropTypes from 'prop-types';
 import { motion, useReducedMotion } from 'framer-motion';
-import { Lock, Sparkles } from 'lucide-react';
+import { ArrowRight, Lock, Sparkles } from 'lucide-react';
+import TemplateWorldScene from './TemplateWorldScene';
+import { getPreviewWorld } from './previewWorlds';
 
-const TemplatePreview = ({ template, selected = false, locked = false, onClick }) => {
+const TemplatePreview = ({
+  template,
+  selected = false,
+  locked = false,
+  onClick,
+  onPreviewStart,
+  onPreviewEnd
+}) => {
   const reduceMotion = useReducedMotion();
+  const world = getPreviewWorld(template.id);
+  const accent = world.colors.secondary || template.colors[1];
 
   return (
     <motion.button
       type="button"
       onClick={onClick}
+      onMouseEnter={() => onPreviewStart?.(template.id)}
+      onMouseLeave={() => onPreviewEnd?.(template.id)}
+      onFocus={() => onPreviewStart?.(template.id)}
+      onBlur={() => onPreviewEnd?.(template.id)}
       whileHover={reduceMotion ? undefined : { y: -6, scale: selected ? 1.03 : 1.02 }}
       whileTap={reduceMotion ? undefined : { scale: 0.98 }}
-      className={`group relative min-w-[220px] snap-start overflow-hidden rounded-3xl border p-4 text-left transition ${
-        selected ? 'border-[#c4b5fd] bg-[#a855f7]/15 shadow-[0_0_36px_rgba(168,85,247,0.26)]' : 'border-white/[0.08] bg-white/[0.045] hover:border-white/[0.16]'
+      className={`group relative min-w-[242px] snap-start overflow-hidden rounded-[22px] border p-3 text-left transition ${
+        selected ? 'border-[#c4b5fd] bg-[#a855f7]/15 shadow-[0_0_38px_rgba(168,85,247,0.28)]' : 'border-white/[0.08] bg-white/[0.045] hover:border-white/[0.18]'
       }`}
+      style={{
+        boxShadow: selected ? `0 0 36px ${accent}38, 0 18px 56px rgba(0,0,0,0.34)` : undefined
+      }}
       aria-label={`${locked ? 'Locked ' : ''}${template.name} template`}
     >
-      <div className="relative h-28 overflow-hidden rounded-2xl border border-white/[0.08] bg-[#0a0a0f]">
-        <motion.div
-          className="absolute inset-0"
-          animate={reduceMotion ? undefined : {
-            background: [
-              `linear-gradient(135deg, ${template.colors[0]}, ${template.colors[1]})`,
-              `linear-gradient(135deg, ${template.colors[1]}, ${template.colors[2]})`,
-              `linear-gradient(135deg, ${template.colors[2]}, ${template.colors[0]})`
-            ]
-          }}
-          transition={{ duration: 4, repeat: Infinity, ease: 'linear' }}
-          style={{ background: `linear-gradient(135deg, ${template.colors[0]}, ${template.colors[1]})` }}
+      <div className="relative h-32 overflow-hidden rounded-[18px] border border-white/[0.09] bg-[#0a0a0f]">
+        <TemplateWorldScene templateId={template.id} />
+        <div
+          className="pointer-events-none absolute inset-x-0 bottom-0 h-20"
+          style={{ background: `linear-gradient(0deg, ${world.colors.bg}f2, transparent)` }}
         />
-        <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.08)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.08)_1px,transparent_1px)] bg-[length:28px_28px] opacity-35" />
-        <div className="absolute bottom-3 left-3 right-3">
-          <div className="h-2 w-2/3 rounded-full bg-white/80" />
-          <div className="mt-2 h-2 w-1/2 rounded-full bg-white/35" />
-        </div>
+        <span className="absolute left-3 top-3 rounded-full border border-white/[0.12] bg-black/25 px-2.5 py-1 text-[9px] font-black uppercase tracking-[0.14em] text-white/80 backdrop-blur-lg">
+          {world.badge}
+        </span>
+        <span
+          className="absolute bottom-3 right-3 inline-flex h-7 w-7 items-center justify-center rounded-full border border-white/[0.14] bg-white/[0.08] text-white backdrop-blur-lg transition group-hover:translate-x-0.5"
+          aria-hidden="true"
+        >
+          <ArrowRight className="h-3.5 w-3.5" />
+        </span>
       </div>
       <div className="mt-4 flex items-start justify-between gap-3">
         <div>
-          <h3 className="font-black text-white">{template.name}</h3>
-          <p className="mt-1 line-clamp-2 text-xs leading-5 text-white/48">{template.description}</p>
+          <p className="text-[10px] font-black uppercase tracking-[0.18em]" style={{ color: accent }}>
+            {world.category}
+          </p>
+          <h3 className="mt-1 font-black text-white">{world.shortLabel}</h3>
+          <p className="mt-1 line-clamp-2 text-xs leading-5 text-white/[0.54]">{world.valueLine}</p>
         </div>
-        <span className={`rounded-full px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.16em] ${template.tier === 'studio' ? 'bg-amber-300/14 text-amber-100' : 'bg-[#a855f7]/18 text-[#d8b4fe]'}`}>
-          {template.tier}
+        <span className={`rounded-full px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.16em] ${template.tier === 'studio' ? 'bg-amber-300/[0.14] text-amber-100' : 'bg-[#a855f7]/[0.18] text-[#d8b4fe]'}`}>
+          {world.pricingTierHint.replace(' World', '')}
         </span>
       </div>
-      <div className="mt-4 flex gap-2">
+      <div className="mt-4 flex items-center justify-between gap-3">
+        <div className="min-w-0">
+          <p className="line-clamp-1 text-[11px] font-semibold text-white/[0.72]">{world.purpose}</p>
+        </div>
+        <div className="flex flex-shrink-0 gap-1.5">
         {template.colors.map((color) => (
           <motion.span
             key={color}
-            className="h-5 w-5 rounded-full border border-white/20"
+            className="h-4 w-4 rounded-full border border-white/20"
             style={{ background: color }}
             animate={reduceMotion ? undefined : { y: [0, -3, 0] }}
             transition={{ duration: 1.8, repeat: Infinity, delay: template.colors.indexOf(color) * 0.18 }}
           />
         ))}
+        </div>
       </div>
       {locked && (
         <div className="absolute inset-0 grid place-items-center bg-[#050508]/72 backdrop-blur-sm">
@@ -81,7 +104,9 @@ TemplatePreview.propTypes = {
   }).isRequired,
   selected: PropTypes.bool,
   locked: PropTypes.bool,
-  onClick: PropTypes.func.isRequired
+  onClick: PropTypes.func.isRequired,
+  onPreviewStart: PropTypes.func,
+  onPreviewEnd: PropTypes.func
 };
 
 export default TemplatePreview;

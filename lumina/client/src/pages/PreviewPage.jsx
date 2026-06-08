@@ -3,8 +3,9 @@ import { useMemo, useState } from 'react';
 import confetti from 'canvas-confetti';
 import { Link, useLocation } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
+import { AnimatePresence, motion, useMotionValue, useReducedMotion, useSpring, useTransform } from 'framer-motion';
 import {
+  ArrowRight,
   Check,
   Code2,
   ExternalLink,
@@ -15,8 +16,11 @@ import {
   Palette,
   RefreshCw,
   Save,
+  ShieldCheck,
+  Sparkles,
   Smartphone,
-  Tablet
+  Tablet,
+  Wand2
 } from 'lucide-react';
 import AuthPromptModal from '../components/AuthPromptModal';
 import Navbar from '../components/Navbar';
@@ -27,8 +31,10 @@ import usePlan from '../hooks/usePlan';
 import { usePortfolio } from '../hooks/usePortfolio';
 import { TEMPLATES, canUseTemplate } from '../templates';
 import TemplateRenderer from '../templates/TemplateRenderer';
+import TemplateWorldScene from '../templates/TemplateWorldScene';
+import { getPreviewWorld, previewTheaterSamplePortfolio } from '../templates/previewWorlds';
 import { resolveTemplateId } from '../templates/shared/templateData';
-import { buildStandaloneHtml, calculateQuality, samplePortfolio } from '../utils/helpers';
+import { buildStandaloneHtml, calculateQuality } from '../utils/helpers';
 import { trackPortfolioExport } from '../utils/api';
 import { getPublicBaseUrl } from '../utils/publicUrl';
 
@@ -90,23 +96,176 @@ PanelLabel.propTypes = {
   icon: PropTypes.node
 };
 
+function WorldSelectorButton({
+  template,
+  world,
+  selected,
+  previewing,
+  locked,
+  onSelect,
+  onPreviewStart,
+  onPreviewEnd
+}) {
+  const reduceMotion = useReducedMotion();
+
+  return (
+    <motion.button
+      type="button"
+      onClick={onSelect}
+      onMouseEnter={onPreviewStart}
+      onMouseLeave={onPreviewEnd}
+      onFocus={onPreviewStart}
+      onBlur={onPreviewEnd}
+      whileHover={reduceMotion ? undefined : { y: locked ? 0 : -2 }}
+      whileTap={reduceMotion ? undefined : { scale: locked ? 1 : 0.98 }}
+      aria-label={`${locked ? 'Locked ' : ''}${world.label}`}
+      style={{
+        width: '100%',
+        display: 'grid',
+        gridTemplateColumns: '64px minmax(0, 1fr) auto',
+        alignItems: 'center',
+        gap: '10px',
+        padding: '8px',
+        borderRadius: '14px',
+        border: selected
+          ? '1px solid rgba(192,132,252,0.82)'
+          : previewing
+            ? `1px solid ${world.colors.secondary}70`
+            : '1px solid rgba(255,255,255,0.08)',
+        background: selected
+          ? 'rgba(168,85,247,0.14)'
+          : previewing
+            ? 'rgba(255,255,255,0.065)'
+            : 'rgba(255,255,255,0.035)',
+        boxShadow: selected ? '0 0 22px rgba(168,85,247,0.24)' : 'none',
+        color: '#fff',
+        cursor: locked ? 'not-allowed' : 'pointer',
+        textAlign: 'left',
+        fontFamily: 'inherit',
+        transition: 'background 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease'
+      }}
+    >
+      <span
+        style={{
+          height: '58px',
+          borderRadius: '11px',
+          overflow: 'hidden',
+          border: '1px solid rgba(255,255,255,0.08)',
+          opacity: locked ? 0.5 : 1
+        }}
+      >
+        <TemplateWorldScene templateId={template.id} compact />
+      </span>
+      <span style={{ minWidth: 0 }}>
+        <span
+          style={{
+            display: 'block',
+            fontSize: '9px',
+            fontWeight: 800,
+            letterSpacing: '0.12em',
+            textTransform: 'uppercase',
+            color: world.colors.secondary
+          }}
+        >
+          {world.pricingTierHint}
+        </span>
+        <span
+          style={{
+            display: 'block',
+            marginTop: '3px',
+            fontSize: '12px',
+            fontWeight: 800,
+            color: '#fff',
+            lineHeight: 1.15,
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap'
+          }}
+        >
+          {world.shortLabel}
+        </span>
+        <span
+          style={{
+            display: 'block',
+            marginTop: '3px',
+            fontSize: '10px',
+            color: 'rgba(255,255,255,0.42)',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap'
+          }}
+        >
+          {world.category}
+        </span>
+      </span>
+      <span
+        style={{
+          width: '24px',
+          height: '24px',
+          borderRadius: '999px',
+          display: 'grid',
+          placeItems: 'center',
+          background: locked ? 'rgba(255,255,255,0.04)' : selected ? '#fff' : 'rgba(255,255,255,0.06)',
+          color: locked ? 'rgba(255,255,255,0.35)' : selected ? '#7c3aed' : 'rgba(255,255,255,0.55)',
+          flexShrink: 0
+        }}
+      >
+        {locked ? <Lock size={12} /> : selected ? <Check size={13} /> : <ArrowRight size={12} />}
+      </span>
+    </motion.button>
+  );
+}
+
+WorldSelectorButton.propTypes = {
+  template: PropTypes.shape({
+    id: PropTypes.string.isRequired
+  }).isRequired,
+  world: PropTypes.shape({
+    label: PropTypes.string.isRequired,
+    shortLabel: PropTypes.string.isRequired,
+    category: PropTypes.string.isRequired,
+    pricingTierHint: PropTypes.string.isRequired,
+    colors: PropTypes.shape({
+      secondary: PropTypes.string.isRequired
+    }).isRequired
+  }).isRequired,
+  selected: PropTypes.bool.isRequired,
+  previewing: PropTypes.bool.isRequired,
+  locked: PropTypes.bool.isRequired,
+  onSelect: PropTypes.func.isRequired,
+  onPreviewStart: PropTypes.func.isRequired,
+  onPreviewEnd: PropTypes.func.isRequired
+};
+
 export default function PreviewPage() {
   const reduceMotion = useReducedMotion();
   const { state } = useLocation();
-  const base = state?.portfolio || samplePortfolio;
+  const base = state?.portfolio || previewTheaterSamplePortfolio;
   const { isAuthenticated } = useAuth();
   const planState = usePlan();
   const { save, isSaving } = usePortfolio();
   const { generate, isGenerating } = useGemini();
   const [portfolio, setPortfolio] = useState(() => normalizeInitialPortfolio(base));
   const [device, setDevice] = useState('desktop');
+  const [previewTemplate, setPreviewTemplate] = useState('');
   const [showConfetti, setShowConfetti] = useState(false);
   const [showAuthPrompt, setShowAuthPrompt] = useState(false);
   const [livePortfolio, setLivePortfolio] = useState(null);
   const [regeneratingField, setRegeneratingField] = useState('');
   const [upgradeRequest, setUpgradeRequest] = useState(null);
+  const pointerX = useMotionValue(0);
+  const pointerY = useMotionValue(0);
+  const springX = useSpring(pointerX, { stiffness: 160, damping: 26, mass: 0.6 });
+  const springY = useSpring(pointerY, { stiffness: 160, damping: 26, mass: 0.6 });
+  const stageX = useTransform(springX, [-0.5, 0.5], reduceMotion ? ['0px', '0px'] : ['-12px', '12px']);
+  const stageY = useTransform(springY, [-0.5, 0.5], reduceMotion ? ['0px', '0px'] : ['-10px', '10px']);
+  const frameRotateY = useTransform(springX, [-0.5, 0.5], reduceMotion ? [0, 0] : [-2, 2]);
+  const frameRotateX = useTransform(springY, [-0.5, 0.5], reduceMotion ? [0, 0] : [1.5, -1.5]);
   const quality = useMemo(() => calculateQuality(portfolio), [portfolio]);
   const currentTemplate = resolveTemplateId(portfolio, portfolio.templateId);
+  const activeTemplate = previewTemplate || currentTemplate;
+  const activeWorld = getPreviewWorld(activeTemplate);
+  const currentWorld = getPreviewWorld(currentTemplate);
   const currentPlan = normalizePlan(planState.plan);
   const selectedPalette = PALETTES.find((item) => item.name === portfolio.colorPalette?.name)?.id || 'obsidian';
   const selectedDevice = DEVICES.find((item) => item.id === device) || DEVICES[2];
@@ -123,6 +282,25 @@ export default function PreviewPage() {
       return;
     }
     updatePortfolio({ templateId: template.id, template: template.id });
+    setPreviewTemplate('');
+  };
+
+  const previewWorld = (templateId) => setPreviewTemplate(templateId);
+
+  const clearPreviewWorld = (templateId) => {
+    setPreviewTemplate((current) => (current === templateId ? '' : current));
+  };
+
+  const handleTheaterPointerMove = (event) => {
+    if (reduceMotion) return;
+    const rect = event.currentTarget.getBoundingClientRect();
+    pointerX.set((event.clientX - rect.left) / rect.width - 0.5);
+    pointerY.set((event.clientY - rect.top) / rect.height - 0.5);
+  };
+
+  const resetTheaterPointer = () => {
+    pointerX.set(0);
+    pointerY.set(0);
   };
 
   const copyCode = async () => {
@@ -178,6 +356,9 @@ export default function PreviewPage() {
   };
 
   const liveUrl = livePortfolio?.slug ? `${publicBaseUrl}/p/${livePortfolio.slug}` : '';
+  const activeTemplateConfig = TEMPLATES[activeTemplate] || TEMPLATES.glass;
+  const activeTemplateLocked = !canAccessTemplate(activeTemplateConfig);
+  const activeTemplateIsPreview = activeTemplate !== currentTemplate;
 
   return (
     <main className="lumina-page" style={{ paddingTop: '64px' }}>
@@ -272,62 +453,24 @@ export default function PreviewPage() {
 
           <div>
             <PanelLabel icon={<Layers size={10} />}>Template</PanelLabel>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
               {templates.map((template) => {
                 const isLocked = !canAccessTemplate(template);
                 const isSelected = currentTemplate === template.id;
+                const isPreviewing = activeTemplate === template.id && !isSelected;
+                const world = getPreviewWorld(template.id);
                 return (
-                  <motion.button
+                  <WorldSelectorButton
                     key={template.id}
-                    type="button"
-                    onClick={() => handleTemplate(template)}
-                    whileHover={{ scale: isLocked ? 1 : 1.04 }}
-                    whileTap={{ scale: isLocked ? 1 : 0.97 }}
-                    aria-label={`${isLocked ? 'Locked ' : ''}${template.name} template`}
-                    style={{
-                      borderRadius: '10px',
-                      overflow: 'hidden',
-                      cursor: isLocked ? 'not-allowed' : 'pointer',
-                      border: isSelected ? '2px solid #a855f7' : '1px solid rgba(255,255,255,0.08)',
-                      boxShadow: isSelected ? '0 0 16px rgba(168,85,247,0.3)' : 'none',
-                      position: 'relative',
-                      transition: 'border 0.2s ease, box-shadow 0.2s ease',
-                      padding: 0,
-                      background: 'transparent',
-                      minWidth: 0
-                    }}
-                  >
-                    <div
-                      style={{
-                        height: '52px',
-                        background: `linear-gradient(135deg, ${template.colors[0]}, ${template.colors[1]}, ${template.colors[2]})`,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center'
-                      }}
-                    />
-                    <div
-                      style={{
-                        padding: '5px 3px',
-                        background: 'rgba(255,255,255,0.03)',
-                        fontSize: '9px',
-                        fontWeight: 600,
-                        color: isSelected ? '#c084fc' : 'rgba(255,255,255,0.5)',
-                        textAlign: 'center',
-                        letterSpacing: '0',
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        whiteSpace: 'nowrap'
-                      }}
-                    >
-                      {template.name}
-                    </div>
-                    {isLocked && (
-                      <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.54)', display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(2px)' }}>
-                        <Lock size={13} color="rgba(255,255,255,0.65)" />
-                      </div>
-                    )}
-                  </motion.button>
+                    template={template}
+                    world={world}
+                    selected={isSelected}
+                    previewing={isPreviewing}
+                    locked={isLocked}
+                    onSelect={() => handleTemplate(template)}
+                    onPreviewStart={() => previewWorld(template.id)}
+                    onPreviewEnd={() => clearPreviewWorld(template.id)}
+                  />
                 );
               })}
             </div>
@@ -543,6 +686,7 @@ export default function PreviewPage() {
         </aside>
 
         <section
+          className="preview-theater-stage-area"
           style={{
             minWidth: 0,
             padding: '24px',
@@ -550,59 +694,222 @@ export default function PreviewPage() {
             backgroundSize: '32px 32px'
           }}
         >
-          <div style={{ maxWidth: '1120px', margin: '0 auto 18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
+          <div className="preview-theater-topbar" style={{ maxWidth: '1240px', margin: '0 auto 18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
             <div>
-              <p style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#c084fc' }}>Preview Studio</p>
-              <h1 style={{ marginTop: '5px', fontSize: '22px', fontWeight: 800, color: '#fff' }}>{portfolio.name || 'Your portfolio'}</h1>
+              <p style={{ fontSize: '11px', fontWeight: 800, letterSpacing: '0.13em', textTransform: 'uppercase', color: activeWorld.colors.secondary }}>Preview Theater</p>
+              <h1 style={{ marginTop: '5px', fontSize: '22px', fontWeight: 850, color: '#fff' }}>{portfolio.name || 'Your portfolio'} in {activeWorld.shortLabel}</h1>
             </div>
-            {livePortfolio ? (
-              <Link to={`/p/${livePortfolio.slug}`} target="_blank" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: '#c084fc', fontSize: '13px', fontWeight: 700 }}>
-                Open live portfolio <ExternalLink size={13} />
-              </Link>
-            ) : null}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '7px 11px', borderRadius: '999px', border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.045)', color: 'rgba(255,255,255,0.66)', fontSize: '12px', fontWeight: 700 }}>
+                <Sparkles size={13} color={activeWorld.colors.secondary} />
+                Selected: {currentWorld.shortLabel}
+              </span>
+              {livePortfolio ? (
+                <Link to={`/p/${livePortfolio.slug}`} target="_blank" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: activeWorld.colors.secondary, fontSize: '13px', fontWeight: 800 }}>
+                  Open live portfolio <ExternalLink size={13} />
+                </Link>
+              ) : null}
+            </div>
           </div>
 
           {liveUrl ? (
-            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} style={{ maxWidth: '1120px', margin: '0 auto 18px', padding: '12px 14px', border: '1px solid rgba(168,85,247,0.24)', borderRadius: '12px', background: 'rgba(168,85,247,0.08)', color: 'rgba(255,255,255,0.7)', fontSize: '12px' }}>
+            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} style={{ maxWidth: '1240px', margin: '0 auto 18px', padding: '12px 14px', border: `1px solid ${activeWorld.colors.secondary}45`, borderRadius: '12px', background: `${activeWorld.colors.secondary}14`, color: 'rgba(255,255,255,0.7)', fontSize: '12px' }}>
               Saved at {liveUrl}
             </motion.div>
           ) : null}
 
           <motion.div
-            layout
-            animate={{ width: selectedDevice.width }}
-            transition={{ duration: reduceMotion ? 0 : 0.35, ease: [0.22, 1, 0.36, 1] }}
+            className="preview-theater-shell"
+            onPointerMove={handleTheaterPointerMove}
+            onPointerLeave={resetTheaterPointer}
+            animate={{
+              backgroundColor: activeWorld.colors.bg
+            }}
+            transition={{ duration: reduceMotion ? 0 : 0.35, ease: 'easeInOut' }}
             style={{
-              maxWidth: '100%',
+              position: 'relative',
+              maxWidth: '1240px',
               margin: '0 auto',
-              borderRadius: '22px',
+              minHeight: 'calc(100vh - 156px)',
+              display: 'grid',
+              gridTemplateColumns: 'minmax(320px, 0.9fr) minmax(520px, 1.1fr)',
+              gap: '24px',
+              alignItems: 'center',
+              padding: '24px',
+              overflow: 'hidden',
+              borderRadius: '28px',
               border: '1px solid rgba(255,255,255,0.09)',
-              background: 'rgba(255,255,255,0.045)',
-              boxShadow: '0 18px 70px rgba(0,0,0,0.44), 0 0 42px rgba(168,85,247,0.1)',
-              overflow: 'hidden'
+              background:
+                `radial-gradient(circle at 18% 12%, ${activeWorld.colors.secondary}30, transparent 30%),
+                radial-gradient(circle at 92% 18%, ${activeWorld.colors.accent}24, transparent 28%),
+                radial-gradient(circle at 64% 102%, ${activeWorld.colors.primary}1c, transparent 38%),
+                ${activeWorld.colors.bg}`,
+              boxShadow: '0 28px 100px rgba(0,0,0,0.48), inset 0 1px 0 rgba(255,255,255,0.08)'
             }}
           >
-            <div style={{ height: '42px', display: 'flex', alignItems: 'center', gap: '8px', padding: '0 14px', borderBottom: '1px solid rgba(255,255,255,0.07)', background: 'rgba(7,7,15,0.84)' }}>
-              <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#fb7185' }} />
-              <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#fbbf24' }} />
-              <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#34d399' }} />
-              <div style={{ marginLeft: '8px', flex: 1, height: '24px', borderRadius: '999px', background: 'rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', padding: '0 12px', color: 'rgba(255,255,255,0.34)', fontSize: '12px' }}>
-                lumina.studio/{portfolio.slug || 'preview'}
+            <motion.div
+              aria-hidden="true"
+              style={{
+                position: 'absolute',
+                inset: '-12%',
+                opacity: 0.24,
+                x: stageX,
+                y: stageY,
+                filter: 'blur(26px)',
+                pointerEvents: 'none'
+              }}
+            >
+              <TemplateWorldScene templateId={activeTemplate} compact={reduceMotion} />
+            </motion.div>
+            <div style={{ position: 'absolute', inset: 0, backgroundImage: 'linear-gradient(rgba(255,255,255,0.035) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px)', backgroundSize: '42px 42px', opacity: 0.42, pointerEvents: 'none' }} />
+
+            <motion.div
+              className="preview-theater-copy"
+              key={`copy-${activeTemplate}`}
+              initial={false}
+              animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+              transition={{ duration: reduceMotion ? 0 : 0.4, ease: [0.22, 1, 0.36, 1] }}
+              style={{
+                position: 'relative',
+                zIndex: 3,
+                minWidth: 0,
+                padding: '20px',
+                borderRadius: '22px',
+                border: '1px solid rgba(255,255,255,0.08)',
+                background: 'rgba(0,0,0,0.18)',
+                backdropFilter: 'blur(18px)',
+                WebkitBackdropFilter: 'blur(18px)',
+                color: activeWorld.colors.text
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginBottom: '18px' }}>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '7px', padding: '7px 11px', borderRadius: '999px', border: `1px solid ${activeWorld.colors.secondary}55`, background: `${activeWorld.colors.secondary}1a`, color: activeWorld.colors.primary, fontSize: '11px', fontWeight: 900, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+                  <Wand2 size={13} />
+                  {activeWorld.badge}
+                </span>
+                <span style={{ display: 'inline-flex', alignItems: 'center', padding: '7px 11px', borderRadius: '999px', border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.055)', color: activeWorld.colors.muted, fontSize: '11px', fontWeight: 800 }}>
+                  {activeTemplateIsPreview ? 'Previewing before selection' : 'Active template'}
+                </span>
               </div>
-            </div>
-            <div className="quiet-scrollbar" style={{ height: 'calc(100vh - 190px)', minHeight: '620px', overflow: 'auto', background: '#06060c' }}>
-              <AnimatePresence mode="wait">
-                <motion.div
-                  key={currentTemplate}
-                  initial={reduceMotion ? { opacity: 1 } : { opacity: 0, scale: 0.98, filter: 'blur(4px)' }}
-                  animate={{ opacity: 1, scale: 1, filter: 'blur(0px)' }}
-                  exit={reduceMotion ? { opacity: 0 } : { opacity: 0, scale: 0.98, filter: 'blur(4px)' }}
-                  transition={{ duration: reduceMotion ? 0 : 0.3, ease: 'easeInOut' }}
+              <h2 style={{ fontSize: 'clamp(32px, 4.4vw, 58px)', lineHeight: 0.96, fontWeight: 900, letterSpacing: '0', color: activeWorld.colors.text, maxWidth: '680px' }}>
+                {activeWorld.headline}
+              </h2>
+              <p style={{ marginTop: '18px', maxWidth: '580px', fontSize: 'clamp(14px, 1.5vw, 17px)', lineHeight: 1.65, color: activeWorld.colors.muted }}>
+                {activeWorld.subheadline}
+              </p>
+              <div style={{ marginTop: '20px', padding: '12px 14px', borderRadius: '14px', border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.055)', color: activeWorld.colors.primary, fontSize: '12px', fontWeight: 800 }}>
+                {activeWorld.valueLine}
+              </div>
+              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '18px' }}>
+                {activeWorld.proof.map((item) => (
+                  <span key={item} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '8px 10px', borderRadius: '999px', border: '1px solid rgba(255,255,255,0.09)', background: 'rgba(0,0,0,0.18)', color: activeWorld.colors.muted, fontSize: '11px', fontWeight: 800 }}>
+                    <ShieldCheck size={12} color={activeWorld.colors.secondary} />
+                    {item}
+                  </span>
+                ))}
+              </div>
+              <div className="preview-theater-cta-row" style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginTop: '24px' }}>
+                <motion.button
+                  type="button"
+                  onClick={() => {
+                    if (activeTemplateIsPreview) {
+                      handleTemplate(activeTemplateConfig);
+                      return;
+                    }
+                    saveCurrent();
+                  }}
+                  disabled={isSaving}
+                  whileHover={reduceMotion ? undefined : { scale: 1.03, boxShadow: `0 0 28px ${activeWorld.colors.secondary}70` }}
+                  whileTap={reduceMotion ? undefined : { scale: 0.97 }}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '8px',
+                    minHeight: '44px',
+                    padding: '11px 18px',
+                    border: 'none',
+                    borderRadius: '999px',
+                    background: activeTemplateLocked
+                      ? 'rgba(255,255,255,0.08)'
+                      : `linear-gradient(135deg, ${activeWorld.colors.secondary}, ${activeWorld.colors.accent})`,
+                    color: '#fff',
+                    fontSize: '13px',
+                    fontWeight: 900,
+                    cursor: isSaving ? 'not-allowed' : 'pointer',
+                    fontFamily: 'inherit',
+                    boxShadow: activeTemplateLocked ? 'none' : `0 0 22px ${activeWorld.colors.secondary}4d`
+                  }}
                 >
-                  <TemplateRenderer portfolio={portfolio} templateId={currentTemplate} />
-                </motion.div>
-              </AnimatePresence>
-            </div>
+                  {activeTemplateLocked ? <Lock size={14} /> : <Wand2 size={14} />}
+                  {activeTemplateIsPreview ? activeWorld.previewCta : activeWorld.cta}
+                </motion.button>
+                <Link to="/build" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '8px', minHeight: '44px', padding: '11px 16px', borderRadius: '999px', border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(255,255,255,0.055)', color: activeWorld.colors.primary, fontSize: '13px', fontWeight: 850 }}>
+                  {activeWorld.secondaryCta}
+                  <ArrowRight size={14} />
+                </Link>
+              </div>
+              <p style={{ marginTop: '13px', maxWidth: '520px', color: activeWorld.colors.muted, fontSize: '12px', lineHeight: 1.55 }}>
+                {activeWorld.microcopy}
+              </p>
+            </motion.div>
+
+            <motion.div
+              className="preview-device-frame-wrap"
+              style={{
+                position: 'relative',
+                zIndex: 1,
+                justifySelf: 'end',
+                width: '100%',
+                maxWidth: '1000px',
+                minWidth: 0,
+                x: stageX,
+                y: stageY,
+                rotateX: frameRotateX,
+                rotateY: frameRotateY,
+                transformPerspective: 1200,
+                transformStyle: 'preserve-3d'
+              }}
+            >
+              <motion.div
+                layout
+                animate={{ width: selectedDevice.width }}
+                transition={{ duration: reduceMotion ? 0 : 0.35, ease: [0.22, 1, 0.36, 1] }}
+                style={{
+                  maxWidth: '100%',
+                  margin: '0 auto',
+                  borderRadius: '22px',
+                  border: `1px solid ${activeWorld.colors.secondary}45`,
+                  background: 'rgba(255,255,255,0.055)',
+                  boxShadow: `0 20px 80px rgba(0,0,0,0.52), 0 0 46px ${activeWorld.colors.secondary}22`,
+                  overflow: 'hidden'
+                }}
+              >
+                <div style={{ height: '42px', display: 'flex', alignItems: 'center', gap: '8px', padding: '0 14px', borderBottom: '1px solid rgba(255,255,255,0.07)', background: 'rgba(7,7,15,0.86)' }}>
+                  <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#fb7185' }} />
+                  <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#fbbf24' }} />
+                  <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#34d399' }} />
+                  <div style={{ marginLeft: '8px', flex: 1, height: '24px', borderRadius: '999px', background: 'rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', padding: '0 12px', color: 'rgba(255,255,255,0.34)', fontSize: '12px', minWidth: 0 }}>
+                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      lumina.studio/{portfolio.slug || activeWorld.shortLabel.toLowerCase()}
+                    </span>
+                  </div>
+                </div>
+                <div className="quiet-scrollbar preview-device-frame-scroll" style={{ height: 'min(70vh, 760px)', minHeight: '560px', overflow: 'auto', background: '#06060c' }}>
+                  <AnimatePresence mode="wait">
+                    <motion.div
+                      key={activeTemplate}
+                      initial={reduceMotion ? { opacity: 1 } : { opacity: 0, scale: 0.98, filter: 'blur(4px)' }}
+                      animate={{ opacity: 1, scale: 1, filter: 'blur(0px)' }}
+                      exit={reduceMotion ? { opacity: 0 } : { opacity: 0, scale: 0.98, filter: 'blur(4px)' }}
+                      transition={{ duration: reduceMotion ? 0 : 0.3, ease: 'easeInOut' }}
+                    >
+                      <TemplateRenderer portfolio={portfolio} templateId={activeTemplate} />
+                    </motion.div>
+                  </AnimatePresence>
+                </div>
+              </motion.div>
+            </motion.div>
           </motion.div>
         </section>
       </div>

@@ -5,7 +5,9 @@ import { Boxes, Check, Lock } from 'lucide-react';
 import usePlan from '../hooks/usePlan';
 import UpgradeModal from './UpgradeModal';
 import TemplatePreview from '../templates/TemplatePreview';
+import TemplateWorldScene from '../templates/TemplateWorldScene';
 import { TEMPLATES, canUseTemplate } from '../templates';
+import { getPreviewWorld } from '../templates/previewWorlds';
 
 const normalizePlan = (planState) => {
   const plan = planState?.plan || planState?.tier || 'starter';
@@ -13,7 +15,7 @@ const normalizePlan = (planState) => {
   return plan;
 };
 
-const TemplatePicker = ({ selectedTemplate, onSelect, compact = false }) => {
+const TemplatePicker = ({ selectedTemplate, onSelect, compact = false, onPreviewStart, onPreviewEnd }) => {
   const reduceMotion = useReducedMotion();
   const planState = usePlan();
   const currentPlan = normalizePlan(planState);
@@ -40,19 +42,24 @@ const TemplatePicker = ({ selectedTemplate, onSelect, compact = false }) => {
           {templates.map((template) => {
             const locked = !canUseTemplate(template, currentPlan);
             const selected = selectedTemplate === template.id;
+            const world = getPreviewWorld(template.id);
             return (
               <motion.button
                 key={template.id}
                 type="button"
                 onClick={() => handleSelect(template)}
+                onMouseEnter={() => onPreviewStart?.(template.id)}
+                onMouseLeave={() => onPreviewEnd?.(template.id)}
+                onFocus={() => onPreviewStart?.(template.id)}
+                onBlur={() => onPreviewEnd?.(template.id)}
                 whileHover={reduceMotion ? undefined : { y: -3, scale: selected ? 1.04 : 1.02 }}
                 whileTap={reduceMotion ? undefined : { scale: 0.98 }}
                 style={{
                   position: 'relative',
-                  minWidth: '74px',
-                  width: '74px',
-                  height: '94px',
-                  borderRadius: '14px',
+                  minWidth: '86px',
+                  width: '86px',
+                  height: '112px',
+                  borderRadius: '15px',
                   border: selected ? '1px solid rgba(192,132,252,0.85)' : '1px solid rgba(255,255,255,0.08)',
                   background: selected ? 'rgba(168,85,247,0.14)' : 'rgba(255,255,255,0.04)',
                   color: '#fff',
@@ -64,35 +71,42 @@ const TemplatePicker = ({ selectedTemplate, onSelect, compact = false }) => {
                 }}
                 aria-label={`${locked ? 'Locked ' : ''}${template.name} template`}
               >
-                <motion.span
-                  animate={reduceMotion ? undefined : {
-                    background: [
-                      `linear-gradient(135deg, ${template.colors[0]}, ${template.colors[1]})`,
-                      `linear-gradient(135deg, ${template.colors[1]}, ${template.colors[2]})`,
-                      `linear-gradient(135deg, ${template.colors[2]}, ${template.colors[0]})`
-                    ]
-                  }}
-                  transition={{ duration: 4, repeat: Infinity, ease: 'linear' }}
+                <span
                   style={{
                     display: 'block',
-                    height: '46px',
+                    height: '58px',
                     borderRadius: '10px',
-                    background: `linear-gradient(135deg, ${template.colors[0]}, ${template.colors[1]})`,
-                    opacity: locked ? 0.45 : 1
+                    opacity: locked ? 0.45 : 1,
+                    overflow: 'hidden'
                   }}
-                />
+                >
+                  <TemplateWorldScene templateId={template.id} compact />
+                </span>
                 <span
                   style={{
                     display: 'block',
                     marginTop: '6px',
-                    fontSize: '10px',
+                    fontSize: '9px',
                     fontWeight: 700,
                     lineHeight: 1.1,
                     color: selected ? '#fff' : 'rgba(255,255,255,0.62)',
                     textAlign: 'left'
                   }}
                 >
-                  {template.name}
+                  {world.shortLabel}
+                </span>
+                <span
+                  style={{
+                    display: 'block',
+                    marginTop: '3px',
+                    fontSize: '8px',
+                    fontWeight: 800,
+                    letterSpacing: '0.08em',
+                    textTransform: 'uppercase',
+                    color: world.colors.secondary
+                  }}
+                >
+                  {template.tier}
                 </span>
                 {selected && (
                   <span
@@ -169,6 +183,8 @@ const TemplatePicker = ({ selectedTemplate, onSelect, compact = false }) => {
               selected={selectedTemplate === template.id}
               locked={!canUseTemplate(template, currentPlan)}
               onClick={() => handleSelect(template)}
+              onPreviewStart={onPreviewStart}
+              onPreviewEnd={onPreviewEnd}
             />
           ))}
         </AnimatePresence>
@@ -186,7 +202,9 @@ const TemplatePicker = ({ selectedTemplate, onSelect, compact = false }) => {
 TemplatePicker.propTypes = {
   compact: PropTypes.bool,
   selectedTemplate: PropTypes.string.isRequired,
-  onSelect: PropTypes.func.isRequired
+  onSelect: PropTypes.func.isRequired,
+  onPreviewStart: PropTypes.func,
+  onPreviewEnd: PropTypes.func
 };
 
 export default TemplatePicker;
